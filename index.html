@@ -17,7 +17,7 @@ main{max-width:1040px;margin:auto;padding:0 16px 40px}.notice{background:#eef1ff
 .fileicon{font-size:27px}.drop strong{display:block;margin:5px 0}.drop small{color:var(--muted)}
 input[type=file]{display:none}.pick{display:inline-flex;margin-top:13px;padding:10px 16px;border-radius:11px;background:var(--blue);color:white;font-weight:650;font-size:13px;cursor:pointer}
 .meta{margin-top:14px;display:none}.meta.show{display:block}.meta-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}.meta-row span:first-child{color:var(--muted)}.meta-row span:last-child{text-align:right;overflow-wrap:anywhere;font-weight:600}
-.mesh-options{display:grid;gap:7px;max-height:260px;overflow:auto}.mesh-option{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfcff;cursor:pointer}.mesh-option input{margin-top:4px;accent-color:var(--blue)}.mesh-copy{display:grid;gap:2px;min-width:0}.mesh-copy b{font-size:13px;overflow-wrap:anywhere}.mesh-copy small{font-size:11px;color:var(--muted)}
+.mesh-options{display:grid;gap:7px;max-height:260px;overflow:auto}.group-options{display:grid;gap:7px;max-height:300px;overflow:auto}.group-option{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:#fbfcff}.group-option input{margin-top:4px;accent-color:var(--blue)}.group-option span{min-width:0;font-size:13px;overflow-wrap:anywhere}.group-option small{display:block;color:var(--muted);font-size:11px}.mesh-option{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfcff;cursor:pointer}.mesh-option input{margin-top:4px;accent-color:var(--blue)}.mesh-copy{display:grid;gap:2px;min-width:0}.mesh-copy b{font-size:13px;overflow-wrap:anywhere}.mesh-copy small{font-size:11px;color:var(--muted)}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.stat{background:#f5f6fc;border-radius:10px;padding:8px 10px;font-size:12px;color:#59627a}.stat b{color:var(--ink);font-size:15px;margin-right:4px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin:17px 0}.btn{border:0;border-radius:12px;padding:12px 17px;font-weight:700;font-size:14px;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:#fff;border:1px solid var(--line);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
 .results{margin-top:16px}.results h2{font-size:18px;margin:0 0 10px}.empty{padding:22px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:15px;font-size:13px}
@@ -30,13 +30,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <body>
 <header><div class="brand"><div class="logo">✦</div><div><h1>Aster BlendShape Transfer Studio</h1><div style="font-size:12px;color:#7a85a0">VRM 0.x · Browser-based · Android friendly</div></div></div><p>Inspect two VRM 0.x models and prepare their BlendShape data for transfer.</p></header>
 <main>
-<div class="notice"><b>VRM 0.x only.</b> Files are processed locally in your browser. Export currently rebuilds Model B unchanged. Manual mesh selection is available; actual BlendShape deformation transfer is still under development.</div>
+<div class="notice"><b>VRM 0.x · Face transfer beta.</b> Select one face mesh in each model and choose the facial BlendShape groups to transfer. The tool maps vertices by normalized face position; results depend on how similar the two face shapes and orientations are. Files stay in your browser.</div>
 <section class="panel" style="margin:14px 0;padding:16px;border:2px solid #6678e8" id="quickDownloadPanel"><h2>Download VRM 0.x</h2><p class="sub">Load Model B first. The download button will become active.</p><button class="btn primary" id="quickDownloadBtn" disabled style="width:100%;font-size:16px;padding:15px">⬇ DOWNLOAD MODEL B (.VRM)</button></section>
 <section class="grid">
 <article class="panel" id="sourcePanel"><h2>Model A · Source</h2><p class="sub">The model that contains the expressions to copy.</p><div class="drop" id="sourceDrop"><div class="fileicon">📤</div><strong>Choose source VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="sourceFile">Select VRM file</label><input id="sourceFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="sourceMeta"></div></article>
 <article class="panel" id="targetPanel"><h2>Model B · Target</h2><p class="sub">The model that will receive the expressions.</p><div class="drop" id="targetDrop"><div class="fileicon">📥</div><strong>Choose target VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="targetFile">Select VRM file</label><input id="targetFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="targetMeta"></div><button class="btn primary" id="downloadTargetBtn" disabled style="width:100%;margin-top:14px">⬇ Download Model B (.vrm)</button></article>
 </section>
-<section class="panel" style="margin-top:14px" id="meshSelectionPanel"><h2>Manual Mesh Selection</h2><p class="sub">Choose source mesh(es) in Model A and destination mesh(es) in Model B.</p><div class="grid"><div><h2 style="font-size:14px">Source meshes · Model A</h2><div id="sourceMeshList" class="empty">Load Model A to list its meshes.</div></div><div><h2 style="font-size:14px">Target meshes · Model B</h2><div id="targetMeshList" class="empty">Load Model B to list its meshes.</div></div></div><div class="status" id="meshSelectionStatus">Select meshes after loading both VRM files. Transfer is not implemented yet.</div></section><div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
+<section class="panel" style="margin-top:14px" id="meshSelectionPanel"><h2>Manual Mesh Selection</h2><p class="sub">Choose source mesh(es) in Model A and destination mesh(es) in Model B.</p><div class="grid"><div><h2 style="font-size:14px">Source meshes · Model A</h2><div id="sourceMeshList" class="empty">Load Model A to list its meshes.</div></div><div><h2 style="font-size:14px">Target meshes · Model B</h2><div id="targetMeshList" class="empty">Load Model B to list its meshes.</div></div></div><div class="status" id="meshSelectionStatus">Select meshes after loading both VRM files. Transfer is not implemented yet.</div></section><section class="panel" style="margin-top:14px" id="faceGroupPanel"><h2>Face BlendShape Groups · Model A</h2><p class="sub">Facial groups are preselected automatically. You can tick or untick groups manually.</p><div id="faceGroupList" class="empty">Load Model A to list its BlendShape groups.</div></section><section class="panel" style="margin-top:14px"><h2>Transfer Face BlendShapes</h2><p class="sub">Choose exactly one source face mesh and one target face mesh. Missing target Morph Targets will be created.</p><button class="btn primary" id="transferFaceBtn" disabled style="width:100%">Transfer selected Face BlendShapes → Model B</button><div class="status" id="transferStatus">Load both VRM 0.x models and select one mesh on each side.</div></section><div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
 <div id="status" class="status">Select two VRM 0.x files to begin.</div>
 <section class="results"><h2>BlendShape overview</h2><div id="overview" class="empty">No model data yet.</div></section>
 </main>
@@ -66,6 +66,42 @@ function inspect(json,file){
  const binds=groups.reduce((n,g)=>n+(g.binds?.length||0),0);
  return {name:vrm.meta?.title||file.name,author:vrm.meta?.author||'—',version:'VRM 0.x',modelVersion,groups,binds,morphCount,meshCount,meshes:meshes.length,nodes:(json.nodes||[]).length};
 }
+function isFaceGroup(g){
+ const preset=String(g.presetName||'').toLowerCase();
+ const name=String(g.name||'').toLowerCase();
+ const known=['a','i','u','e','o','blink','blink_l','blink_r','joy','angry','sorrow','fun','lookup','lookdown','lookleft','lookright'];
+ if(known.includes(preset))return true;
+ return /face|eye|eyebrow|brow|mouth|lip|blink|wink|smile|happy|joy|angry|sorrow|sad|surpris|vowel|phoneme|gaze|look.?up|look.?down|look.?left|look.?right|fcl_/i.test(name+' '+preset);
+}
+function renderFaceGroups(){
+ const root=$('faceGroupList'),model=state.source;
+ if(!model){root.className='empty';root.textContent='Load Model A to list its BlendShape groups.';return;}
+ const groups=model.data.groups||[];
+ if(!groups.length){root.className='empty';root.textContent='Model A has no VRM 0.x BlendShape Groups.';return;}
+ root.className='group-options';
+ root.innerHTML=groups.map((g,i)=>{
+  const checked=(model.selectedGroups||[]).includes(i)?' checked':'';
+  const preset=g.presetName?(' · preset: '+esc(g.presetName)):'';
+  return '<label class="group-option"><input type="checkbox" data-group-index="'+i+'"'+checked+'><span><b>'+esc(g.name||('Group '+i))+'</b><small>'+((g.binds||[]).length)+' bind(s)'+preset+'</small></span></label>';
+ }).join('');
+ root.querySelectorAll('input[data-group-index]').forEach(input=>input.addEventListener('change',()=>{
+  const chosen=new Set(model.selectedGroups||[]),index=Number(input.dataset.groupIndex);
+  if(input.checked)chosen.add(index);else chosen.delete(index);
+  model.selectedGroups=[...chosen].sort((a,b)=>a-b);
+  updateTransferControls();
+ }));
+}
+function updateTransferControls(){
+ const a=state.source?.selectedMeshes||[],b=state.target?.selectedMeshes||[];
+ const groups=state.source?.selectedGroups||[];
+ const ready=!!(state.source&&state.target&&a.length===1&&b.length===1&&groups.length&& !state.target.transferred);
+ $('transferFaceBtn').disabled=!ready;
+ if(!state.source||!state.target)$('transferStatus').textContent='Load both VRM 0.x models and select one mesh on each side.';
+ else if(a.length!==1||b.length!==1)$('transferStatus').textContent='Select exactly one source face mesh and one target face mesh.';
+ else if(!groups.length)$('transferStatus').textContent='Select at least one facial BlendShape Group from Model A.';
+ else if(state.target.transferred)$('transferStatus').textContent='A transfer has already been applied to this loaded Model B. Clear files before starting a fresh transfer.';
+ else $('transferStatus').textContent='Ready: '+groups.length+' selected group(s), source mesh #'+a[0]+' → target mesh #'+b[0]+'.';
+}
 function renderMeshChoices(which){
  const model=state[which],root=$(which+'MeshList');
  if(!model){root.className='empty';root.textContent='Load Model '+(which==='source'?'A':'B')+' to list its meshes.';return;}
@@ -81,7 +117,7 @@ function renderMeshChoices(which){
  root.querySelectorAll('input[data-mesh-index]').forEach(input=>input.addEventListener('change',()=>{
   const selected=new Set(model.selectedMeshes||[]),index=Number(input.dataset.meshIndex);
   if(input.checked)selected.add(index);else selected.delete(index);
-  model.selectedMeshes=[...selected].sort((a,b)=>a-b);updateMeshSelectionStatus();
+  model.selectedMeshes=[...selected].sort((a,b)=>a-b);updateMeshSelectionStatus();updateTransferControls();
  }));
 }
 function updateMeshSelectionStatus(){
@@ -90,10 +126,150 @@ function updateMeshSelectionStatus(){
 }
 function renderMeta(which,data){const el=$(which+'Meta');el.className='meta show';el.innerHTML='<div class="meta-row"><span>Model</span><span>'+esc(data.name)+'</span></div><div class="meta-row"><span>Author</span><span>'+esc(data.author)+'</span></div><div class="meta-row"><span>VRM format</span><span>'+esc(data.version)+'</span></div><div class="meta-row"><span>Model version</span><span>'+esc(data.modelVersion)+'</span></div><div class="stats"><div class="stat"><b>'+data.groups.length+'</b>Groups</div><div class="stat"><b>'+data.binds+'</b>Binds</div><div class="stat"><b>'+data.morphCount+'</b>Morph targets</div><div class="stat"><b>'+data.meshCount+'</b>Meshes with morphs</div></div>'}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data,selectedMeshes:[]};renderMeta(which,data);renderMeshChoices(which);updateMeshSelectionStatus();$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';renderMeshChoices(which);updateMeshSelectionStatus();$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
+async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data,selectedMeshes:[],selectedGroups:which==='source'?data.groups.map((g,i)=>isFaceGroup(g)?i:null).filter(i=>i!==null):[],transferred:false};renderMeta(which,data);renderMeshChoices(which);if(which==='source')renderFaceGroups();updateMeshSelectionStatus();updateTransferControls();$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';renderMeshChoices(which);updateMeshSelectionStatus();$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
 function updateButtons(){$('analyzeBtn').disabled=!(state.source&&state.target);$('exportBtn').disabled=!state.target;$('downloadTargetBtn').disabled=!state.target;$('quickDownloadBtn').disabled=!state.target;}
 $('sourceFile').addEventListener('change',e=>load('source',e.target.files[0]));$('targetFile').addEventListener('change',e=>load('target',e.target.files[0]));
 ['source','target'].forEach(k=>{const d=$(k+'Drop');d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('active')});d.addEventListener('dragleave',()=>d.classList.remove('active'));d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('active');const f=e.dataTransfer.files[0];load(k,f);});});
+function readVec3Accessor(model,accessorIndex){
+ const json=model.json,acc=json.accessors?.[accessorIndex];
+ if(!acc||acc.type!=='VEC3'||acc.componentType!==5126)throw Error('Face transfer requires FLOAT VEC3 POSITION data.');
+ if(acc.sparse)throw Error('Sparse POSITION accessors are not supported yet.');
+ const bv=json.bufferViews?.[acc.bufferView];
+ if(!bv||!model.bin)throw Error('A mesh POSITION or Morph Target buffer is missing.');
+ const stride=bv.byteStride||12,base=(bv.byteOffset||0)+(acc.byteOffset||0);
+ const view=new DataView(model.bin.buffer,model.bin.byteOffset,model.bin.byteLength);
+ const out=new Float32Array(acc.count*3);
+ for(let i=0;i<acc.count;i++)for(let k=0;k<3;k++)out[i*3+k]=view.getFloat32(base+i*stride+k*4,true);
+ return out;
+}
+function boundsFor(parts){
+ const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+ for(const arr of parts)for(let i=0;i<arr.length;i+=3)for(let k=0;k<3;k++){const v=arr[i+k];if(v<min[k])min[k]=v;if(v>max[k])max[k]=v;}
+ const size=max.map((v,k)=>Math.max(v-min[k],1e-8));
+ return {min,size};
+}
+function normalizePositions(arr,bounds){
+ const out=new Float32Array(arr.length);
+ for(let i=0;i<arr.length;i+=3)for(let k=0;k<3;k++)out[i+k]=(arr[i+k]-bounds.min[k])/bounds.size[k];
+ return out;
+}
+function buildKD(points,ids,depth=0){
+ if(!ids.length)return null;
+ const axis=depth%3;
+ ids.sort((a,b)=>points[a*3+axis]-points[b*3+axis]);
+ const mid=ids.length>>1,index=ids[mid];
+ return {index,axis,left:buildKD(points,ids.slice(0,mid),depth+1),right:buildKD(points,ids.slice(mid+1),depth+1)};
+}
+function nearestKD(node,points,x,y,z,best={index:-1,d:Infinity}){
+ if(!node)return best;
+ const i=node.index,dx=points[i*3]-x,dy=points[i*3+1]-y,dz=points[i*3+2]-z,d=dx*dx+dy*dy+dz*dz;
+ if(d<best.d){best.index=i;best.d=d;}
+ const delta=[x,y,z][node.axis]-points[i*3+node.axis],near=delta<0?node.left:node.right,far=delta<0?node.right:node.left;
+ nearestKD(near,points,x,y,z,best);
+ if(delta*delta<best.d)nearestKD(far,points,x,y,z,best);
+ return best;
+}
+function appendFloatVec3(model,values){
+ const old=model.bin||new Uint8Array(0),pad=(4-old.length%4)%4,offset=old.length+pad;
+ const bytes=new Uint8Array(values.length*4);
+ const dv=new DataView(bytes.buffer);
+ for(let i=0;i<values.length;i++)dv.setFloat32(i*4,values[i],true);
+ const joined=new Uint8Array(offset+bytes.length);joined.set(old);joined.set(bytes,offset);model.bin=joined;
+ model.json.bufferViews=model.json.bufferViews||[];
+ model.json.accessors=model.json.accessors||[];
+ const bufferView=model.json.bufferViews.length;
+ model.json.bufferViews.push({buffer:0,byteOffset:offset,byteLength:bytes.length,target:34962});
+ const accessor=model.json.accessors.length;
+ model.json.accessors.push({bufferView,componentType:5126,count:values.length/3,type:'VEC3'});
+ model.json.buffers=model.json.buffers||[{byteLength:joined.length}];
+ model.json.buffers[0].byteLength=joined.length;
+ return accessor;
+}
+function transferFaceBlendShapes(){
+ try{
+  const source=state.source,target=state.target;
+  if(!source||!target)throw Error('Load Model A and Model B first.');
+  const srcIds=source.selectedMeshes||[],dstIds=target.selectedMeshes||[];
+  if(srcIds.length!==1||dstIds.length!==1)throw Error('Select exactly one source face mesh and one target face mesh.');
+  if(target.transferred)throw Error('Clear and reload Model B before applying another transfer.');
+  const srcMeshIndex=srcIds[0],dstMeshIndex=dstIds[0];
+  const srcMesh=source.json.meshes?.[srcMeshIndex],dstMesh=target.json.meshes?.[dstMeshIndex];
+  if(!srcMesh||!dstMesh)throw Error('Selected mesh was not found.');
+  const srcPrims=srcMesh.primitives||[],dstPrims=dstMesh.primitives||[];
+  if(!srcPrims.length||!dstPrims.length)throw Error('Selected mesh has no primitives.');
+  const srcPositions=srcPrims.map(p=>{if(p.attributes?.POSITION===undefined)throw Error('Source face mesh is missing POSITION data.');return readVec3Accessor(source,p.attributes.POSITION);});
+  const dstPositions=dstPrims.map(p=>{if(p.attributes?.POSITION===undefined)throw Error('Target face mesh is missing POSITION data.');return readVec3Accessor(target,p.attributes.POSITION);});
+  const srcBounds=boundsFor(srcPositions),dstBounds=boundsFor(dstPositions);
+  const normalizedSource=srcPositions.map(a=>normalizePositions(a,srcBounds));
+  const normalizedTarget=dstPositions.map(a=>normalizePositions(a,dstBounds));
+  const sourcePoints=[];for(const arr of normalizedSource)for(let i=0;i<arr.length;i+=3)sourcePoints.push(arr[i],arr[i+1],arr[i+2]);
+  if(!sourcePoints.length)throw Error('Source face mesh contains no vertices.');
+  const sourcePointArray=new Float32Array(sourcePoints),tree=buildKD(sourcePointArray,Array.from({length:sourcePointArray.length/3},(_,i)=>i));
+  const selected=(source.selectedGroups||[]).map(i=>({index:i,group:source.data.groups[i]})).filter(x=>x.group);
+  if(!selected.length)throw Error('Select at least one facial BlendShape Group.');
+  const groupsToCopy=selected.map(({index,group})=>{
+   const binds=(group.binds||[]).filter(b=>b.mesh===srcMeshIndex);
+   if(!binds.length)return null;
+   const delta=new Float32Array(sourcePointArray.length);
+   let offset=0;
+   srcPrims.forEach((prim,pi)=>{
+    const count=srcPositions[pi].length/3;
+    for(const bind of binds){
+     const targetDef=prim.targets?.[bind.index];
+     if(!targetDef?.POSITION)continue;
+     const d=readVec3Accessor(source,targetDef.POSITION),weight=(Number(bind.weight??100))/100;
+     for(let j=0;j<Math.min(d.length, count*3);j++)delta[offset+j]+=d[j]*weight;
+    }
+    offset+=count*3;
+   });
+   return {index,group,delta};
+  }).filter(Boolean);
+  if(!groupsToCopy.length)throw Error('None of the selected groups has a bind for the selected source mesh. Choose the face mesh used by those groups.');
+  let nextIndex=Math.max(0,...dstPrims.map(p=>(p.targets||[]).length));
+  dstPrims.forEach(p=>{p.targets=p.targets||[];while(p.targets.length<nextIndex)p.targets.push({});});
+  const targetExtras=dstMesh.extras=dstMesh.extras||{};
+  const names=targetExtras.targetNames=Array.isArray(targetExtras.targetNames)?targetExtras.targetNames.slice():[];
+  while(names.length<nextIndex)names.push('Target_'+names.length);
+  const vrm=target.json.extensions?.VRM;
+  if(!vrm)throw Error('Target VRM 0.x extension is missing.');
+  vrm.blendShapeMaster=vrm.blendShapeMaster||{blendShapeGroups:[]};
+  vrm.blendShapeMaster.blendShapeGroups=vrm.blendShapeMaster.blendShapeGroups||[];
+  const existing=vrm.blendShapeMaster.blendShapeGroups;
+  const existingNames=new Set(existing.map(g=>String(g.name||'')));
+  const existingPresets=new Set(existing.map(g=>String(g.presetName||'unknown').toLowerCase()));
+  const added=[];
+  for(const item of groupsToCopy){
+   const morphIndex=nextIndex++,baseName=String(item.group.name||('Face_'+item.index));
+   let newName=baseName,serial=2;while(existingNames.has(newName))newName=baseName+'_Copy'+serial++;
+   const preset=String(item.group.presetName||'unknown').toLowerCase();
+   const newPreset=existingPresets.has(preset)&&preset!=='unknown'?'unknown':(item.group.presetName||'unknown');
+   for(let pi=0;pi<dstPrims.length;pi++){
+    const base=dstPositions[pi],normalized=normalizedTarget[pi],mapped=new Float32Array(base.length);
+    for(let v=0;v<base.length/3;v++){
+     const nearest=nearestKD(tree,sourcePointArray,normalized[v*3],normalized[v*3+1],normalized[v*3+2]);
+     const si=nearest.index,scaleX=dstBounds.size[0]/srcBounds.size[0],scaleY=dstBounds.size[1]/srcBounds.size[1],scaleZ=dstBounds.size[2]/srcBounds.size[2];
+     mapped[v*3]=item.delta[si*3]*scaleX;mapped[v*3+1]=item.delta[si*3+1]*scaleY;mapped[v*3+2]=item.delta[si*3+2]*scaleZ;
+    }
+    const accessor=appendFloatVec3(target,mapped);
+    dstPrims[pi].targets[morphIndex]={...(dstPrims[pi].targets[morphIndex]||{}),POSITION:accessor};
+   }
+   names[morphIndex]=newName;
+   existing.push({name:newName,presetName:newPreset,isBinary:!!item.group.isBinary,binds:[{mesh:dstMeshIndex,index:morphIndex,weight:100}],materialValues:[]});
+   existingNames.add(newName);if(newPreset!=='unknown')existingPresets.add(String(newPreset).toLowerCase());
+   added.push(newName);
+  }
+  dstMesh.extras.targetNames=names;
+  target.transferred=true;
+  $('transferStatus').className='status ok';
+  $('transferStatus').textContent='Created '+added.length+' facial Morph Target(s) and VRM 0.x BlendShape Group(s): '+added.join(', ')+'. Inspect the face carefully; nearest-surface mapping is approximate.';
+  $('status').className='status ok';
+  $('status').textContent='Face BlendShape transfer completed. Export Model B to save the new VRM 0.x file.';
+  updateTransferControls();
+ }catch(e){
+  $('transferStatus').className='status err';$('transferStatus').textContent='Face transfer failed: '+e.message;
+  $('status').className='status err';$('status').textContent='Face transfer failed: '+e.message;
+ }
+}
 function buildGLB(json,bin){
  const enc=new TextEncoder();
  const jsonBytes=enc.encode(JSON.stringify(json));
@@ -123,10 +299,10 @@ function exportTarget(){
   $('status').textContent='Model B exported as VRM 0.x. This export preserves the target model; BlendShape transfer is not connected yet.';
  }catch(e){$('status').className='status err';$('status').textContent='VRM export failed: '+e.message;}
 }
-$('exportBtn').addEventListener('click',exportTarget);$('downloadTargetBtn').addEventListener('click',exportTarget);$('quickDownloadBtn').addEventListener('click',exportTarget);
+$('exportBtn').addEventListener('click',exportTarget);$('downloadTargetBtn').addEventListener('click',exportTarget);$('quickDownloadBtn').addEventListener('click',exportTarget);$('transferFaceBtn').addEventListener('click',transferFaceBlendShapes);
 $('analyzeBtn').addEventListener('click',()=>{const a=state.source.data,b=state.target.data;const namesA=a.groups.map(g=>g.name||'(unnamed)');const namesB=new Set(b.groups.map(g=>g.name||'(unnamed)'));const matched=namesA.filter(n=>namesB.has(n));const onlyA=namesA.filter(n=>!namesB.has(n));const onlyB=b.groups.map(g=>g.name||'(unnamed)').filter(n=>!new Set(namesA).has(n));let html='<div class="stats"><div class="stat"><b>'+matched.length+'</b>Same-name groups</div><div class="stat"><b>'+onlyA.length+'</b>Source-only</div><div class="stat"><b>'+onlyB.length+'</b>Target-only</div></div><div class="group-list" style="margin-top:12px">';
 a.groups.forEach(g=>{const n=g.name||'(unnamed)';html+='<div class="group"><div class="group-top"><span>'+esc(n)+'</span><span class="pill">'+(namesB.has(n)?'Name match':'Source only')+'</span></div><div class="binds">'+(g.binds?.length||0)+' mesh bind(s) · '+(g.materialValues?.length||0)+' material value(s)</div></div>';});
 html+='</div>';if(!a.groups.length)html='<div class="empty">The source model has no VRM 0.x BlendShape groups.</div>';$('overview').className='';$('overview').innerHTML=html;$('status').className='status ok';$('status').textContent='Analysis complete. This build compares group names and reads bind metadata; it does not modify either file yet.';});
-$('clearBtn').addEventListener('click',()=>{state.source=state.target=null;['source','target'].forEach(k=>{$(k+'File').value='';$(k+'Meta').className='meta';renderMeshChoices(k);});updateMeshSelectionStatus();$('overview').className='empty';$('overview').textContent='No model data yet.';$('status').className='status';$('status').textContent='Select two VRM 0.x files to begin.';updateButtons();});
+$('clearBtn').addEventListener('click',()=>{state.source=state.target=null;['source','target'].forEach(k=>{$(k+'File').value='';$(k+'Meta').className='meta';renderMeshChoices(k);});renderFaceGroups();updateMeshSelectionStatus();updateTransferControls();$('overview').className='empty';$('overview').textContent='No model data yet.';$('status').className='status';$('status').textContent='Select two VRM 0.x files to begin.';updateButtons();});
 </script>
 </body></html>
