@@ -51,17 +51,20 @@ function readGLB(buffer){
  return {json,bin};
 }
 function inspect(json,file){
- const ext=json.extensions||{};const vrm=ext.VRM;
+ const ext=json.extensions||{};
+ const vrm=ext.VRM;
+ if(ext.VRMC_vrm)throw Error('This is a VRM 1.0 model. Aster BlendShape Transfer Studio currently supports VRM 0.x only.');
  if(!vrm)throw Error('This file does not contain the legacy VRM extension (VRM 0.x).');
- const version=vrm.meta?.version||'unknown';
- if(!/^0\./.test(version))throw Error('Only VRM 0.x is supported. Detected version: '+version);
+ // In VRM 0.x, meta.version is the creator's model version (often "1"),
+ // not the VRM specification version. Presence of extensions.VRM identifies VRM 0.x.
+ const modelVersion=vrm.meta?.version||'Not specified';
  const groups=vrm.blendShapeMaster?.blendShapeGroups||[];
  const meshes=json.meshes||[];let morphCount=0,meshCount=0;
  meshes.forEach(m=>{(m.primitives||[]).forEach(p=>{if(p.targets?.length){meshCount++;morphCount+=p.targets.length;}})});
  const binds=groups.reduce((n,g)=>n+(g.binds?.length||0),0);
- return {name:vrm.meta?.title||file.name,author:vrm.meta?.author||'—',version,groups,binds,morphCount,meshCount,meshes:meshes.length,nodes:(json.nodes||[]).length};
+ return {name:vrm.meta?.title||file.name,author:vrm.meta?.author||'—',version:'VRM 0.x',modelVersion,groups,binds,morphCount,meshCount,meshes:meshes.length,nodes:(json.nodes||[]).length};
 }
-function renderMeta(which,data){const el=$(which+'Meta');el.className='meta show';el.innerHTML='<div class="meta-row"><span>Model</span><span>'+esc(data.name)+'</span></div><div class="meta-row"><span>Author</span><span>'+esc(data.author)+'</span></div><div class="meta-row"><span>Version</span><span>'+esc(data.version)+'</span></div><div class="stats"><div class="stat"><b>'+data.groups.length+'</b>Groups</div><div class="stat"><b>'+data.binds+'</b>Binds</div><div class="stat"><b>'+data.morphCount+'</b>Morph targets</div><div class="stat"><b>'+data.meshCount+'</b>Meshes with morphs</div></div>'}
+function renderMeta(which,data){const el=$(which+'Meta');el.className='meta show';el.innerHTML='<div class="meta-row"><span>Model</span><span>'+esc(data.name)+'</span></div><div class="meta-row"><span>Author</span><span>'+esc(data.author)+'</span></div><div class="meta-row"><span>VRM format</span><span>'+esc(data.version)+'</span></div><div class="meta-row"><span>Model version</span><span>'+esc(data.modelVersion)+'</span></div><div class="stats"><div class="stat"><b>'+data.groups.length+'</b>Groups</div><div class="stat"><b>'+data.binds+'</b>Binds</div><div class="stat"><b>'+data.morphCount+'</b>Morph targets</div><div class="stat"><b>'+data.meshCount+'</b>Meshes with morphs</div></div>'}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data};renderMeta(which,data);$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
 function updateButtons(){$('analyzeBtn').disabled=!(state.source&&state.target);}
