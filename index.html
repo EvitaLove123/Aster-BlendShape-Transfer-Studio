@@ -29,12 +29,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <body>
 <header><div class="brand"><div class="logo">✦</div><div><h1>Aster BlendShape Transfer Studio</h1><div style="font-size:12px;color:#7a85a0">VRM 0.x · Browser-based · Android friendly</div></div></div><p>Inspect two VRM 0.x models and prepare their BlendShape data for transfer.</p></header>
 <main>
-<div class="notice"><b>VRM 0.x only.</b> Files are read locally in your browser. Nothing is uploaded to a server. This first build validates VRM files and reads BlendShape groups; transfer and export are being added in stages.</div>
+<div class="notice"><b>VRM 0.x only.</b> Files are processed locally in your browser. Export currently rebuilds and downloads Model B while preserving its VRM 0.x data. BlendShape transfer will be connected to this exporter in the next stage.</div>
 <section class="grid">
 <article class="panel" id="sourcePanel"><h2>Model A · Source</h2><p class="sub">The model that contains the expressions to copy.</p><div class="drop" id="sourceDrop"><div class="fileicon">📤</div><strong>Choose source VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="sourceFile">Select VRM file</label><input id="sourceFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="sourceMeta"></div></article>
 <article class="panel" id="targetPanel"><h2>Model B · Target</h2><p class="sub">The model that will receive the expressions.</p><div class="drop" id="targetDrop"><div class="fileicon">📥</div><strong>Choose target VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="targetFile">Select VRM file</label><input id="targetFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="targetMeta"></div></article>
 </section>
-<div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
+<div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
 <div id="status" class="status">Select two VRM 0.x files to begin.</div>
 <section class="results"><h2>BlendShape overview</h2><div id="overview" class="empty">No model data yet.</div></section>
 </main>
@@ -67,9 +67,39 @@ function inspect(json,file){
 function renderMeta(which,data){const el=$(which+'Meta');el.className='meta show';el.innerHTML='<div class="meta-row"><span>Model</span><span>'+esc(data.name)+'</span></div><div class="meta-row"><span>Author</span><span>'+esc(data.author)+'</span></div><div class="meta-row"><span>VRM format</span><span>'+esc(data.version)+'</span></div><div class="meta-row"><span>Model version</span><span>'+esc(data.modelVersion)+'</span></div><div class="stats"><div class="stat"><b>'+data.groups.length+'</b>Groups</div><div class="stat"><b>'+data.binds+'</b>Binds</div><div class="stat"><b>'+data.morphCount+'</b>Morph targets</div><div class="stat"><b>'+data.meshCount+'</b>Meshes with morphs</div></div>'}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data};renderMeta(which,data);$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
-function updateButtons(){$('analyzeBtn').disabled=!(state.source&&state.target);}
+function updateButtons(){$('analyzeBtn').disabled=!(state.source&&state.target);$('exportBtn').disabled=!state.target;}
 $('sourceFile').addEventListener('change',e=>load('source',e.target.files[0]));$('targetFile').addEventListener('change',e=>load('target',e.target.files[0]));
 ['source','target'].forEach(k=>{const d=$(k+'Drop');d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('active')});d.addEventListener('dragleave',()=>d.classList.remove('active'));d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('active');const f=e.dataTransfer.files[0];load(k,f);});});
+function buildGLB(json,bin){
+ const enc=new TextEncoder();
+ const jsonBytes=enc.encode(JSON.stringify(json));
+ const jsonPad=(4-jsonBytes.length%4)%4;
+ const binBytes=bin||new Uint8Array(0);
+ const binPad=(4-binBytes.length%4)%4;
+ const jsonLength=jsonBytes.length+jsonPad;
+ const binLength=binBytes.length?binBytes.length+binPad:0;
+ const total=12+8+jsonLength+(binBytes.length?8+binLength:0);
+ const out=new ArrayBuffer(total),view=new DataView(out),bytes=new Uint8Array(out);
+ view.setUint32(0,0x46546c67,true);view.setUint32(4,2,true);view.setUint32(8,total,true);
+ let p=12;view.setUint32(p,jsonLength,true);view.setUint32(p+4,0x4e4f534a,true);p+=8;
+ bytes.set(jsonBytes,p);p+=jsonBytes.length;for(let i=0;i<jsonPad;i++)bytes[p++]=0x20;
+ if(binBytes.length){view.setUint32(p,binLength,true);view.setUint32(p+4,0x004e4942,true);p+=8;bytes.set(binBytes,p);p+=binBytes.length;for(let i=0;i<binPad;i++)bytes[p++]=0;}
+ return out;
+}
+function exportTarget(){
+ if(!state.target)return;
+ try{
+  const output=buildGLB(state.target.json,state.target.bin);
+  const blob=new Blob([output],{type:'model/gltf-binary'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  const base=state.target.file.name.replace(/\\.vrm$/i,'');
+  a.href=url;a.download=base+'_Exported.vrm';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  $('status').className='status ok';
+  $('status').textContent='Model B exported as VRM 0.x. This export preserves the target model; BlendShape transfer is not connected yet.';
+ }catch(e){$('status').className='status err';$('status').textContent='VRM export failed: '+e.message;}
+}
+$('exportBtn').addEventListener('click',exportTarget);
 $('analyzeBtn').addEventListener('click',()=>{const a=state.source.data,b=state.target.data;const namesA=a.groups.map(g=>g.name||'(unnamed)');const namesB=new Set(b.groups.map(g=>g.name||'(unnamed)'));const matched=namesA.filter(n=>namesB.has(n));const onlyA=namesA.filter(n=>!namesB.has(n));const onlyB=b.groups.map(g=>g.name||'(unnamed)').filter(n=>!new Set(namesA).has(n));let html='<div class="stats"><div class="stat"><b>'+matched.length+'</b>Same-name groups</div><div class="stat"><b>'+onlyA.length+'</b>Source-only</div><div class="stat"><b>'+onlyB.length+'</b>Target-only</div></div><div class="group-list" style="margin-top:12px">';
 a.groups.forEach(g=>{const n=g.name||'(unnamed)';html+='<div class="group"><div class="group-top"><span>'+esc(n)+'</span><span class="pill">'+(namesB.has(n)?'Name match':'Source only')+'</span></div><div class="binds">'+(g.binds?.length||0)+' mesh bind(s) · '+(g.materialValues?.length||0)+' material value(s)</div></div>';});
 html+='</div>';if(!a.groups.length)html='<div class="empty">The source model has no VRM 0.x BlendShape groups.</div>';$('overview').className='';$('overview').innerHTML=html;$('status').className='status ok';$('status').textContent='Analysis complete. This build compares group names and reads bind metadata; it does not modify either file yet.';});
