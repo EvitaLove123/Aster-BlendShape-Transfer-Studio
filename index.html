@@ -54,7 +54,7 @@ function inspect(json,file){
  const ext=json.extensions||{};const vrm=ext.VRM;
  if(!vrm)throw Error('This file does not contain the legacy VRM extension (VRM 0.x).');
  const version=vrm.meta?.version||'unknown';
- if(!/^0\\./.test(version))throw Error('Only VRM 0.x is supported. Detected version: '+version);
+ if(!/^0\./.test(version))throw Error('Only VRM 0.x is supported. Detected version: '+version);
  const groups=vrm.blendShapeMaster?.blendShapeGroups||[];
  const meshes=json.meshes||[];let morphCount=0,meshCount=0;
  meshes.forEach(m=>{(m.primitives||[]).forEach(p=>{if(p.targets?.length){meshCount++;morphCount+=p.targets.length;}})});
