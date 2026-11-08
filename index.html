@@ -17,6 +17,7 @@ main{max-width:1040px;margin:auto;padding:0 16px 40px}.notice{background:#eef1ff
 .fileicon{font-size:27px}.drop strong{display:block;margin:5px 0}.drop small{color:var(--muted)}
 input[type=file]{display:none}.pick{display:inline-flex;margin-top:13px;padding:10px 16px;border-radius:11px;background:var(--blue);color:white;font-weight:650;font-size:13px;cursor:pointer}
 .meta{margin-top:14px;display:none}.meta.show{display:block}.meta-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}.meta-row span:first-child{color:var(--muted)}.meta-row span:last-child{text-align:right;overflow-wrap:anywhere;font-weight:600}
+.mesh-options{display:grid;gap:7px;max-height:260px;overflow:auto}.mesh-option{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fbfcff;cursor:pointer}.mesh-option input{margin-top:4px;accent-color:var(--blue)}.mesh-copy{display:grid;gap:2px;min-width:0}.mesh-copy b{font-size:13px;overflow-wrap:anywhere}.mesh-copy small{font-size:11px;color:var(--muted)}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.stat{background:#f5f6fc;border-radius:10px;padding:8px 10px;font-size:12px;color:#59627a}.stat b{color:var(--ink);font-size:15px;margin-right:4px}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin:17px 0}.btn{border:0;border-radius:12px;padding:12px 17px;font-weight:700;font-size:14px;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:#fff;border:1px solid var(--line);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
 .results{margin-top:16px}.results h2{font-size:18px;margin:0 0 10px}.empty{padding:22px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:15px;font-size:13px}
@@ -29,12 +30,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <body>
 <header><div class="brand"><div class="logo">✦</div><div><h1>Aster BlendShape Transfer Studio</h1><div style="font-size:12px;color:#7a85a0">VRM 0.x · Browser-based · Android friendly</div></div></div><p>Inspect two VRM 0.x models and prepare their BlendShape data for transfer.</p></header>
 <main>
-<div class="notice"><b>VRM 0.x only.</b> Files are processed locally in your browser. Export currently rebuilds and downloads Model B while preserving its VRM 0.x data. BlendShape transfer will be connected to this exporter in the next stage.</div>
+<div class="notice"><b>VRM 0.x only.</b> Files are processed locally in your browser. Export currently rebuilds Model B unchanged. Manual mesh selection is available; actual BlendShape deformation transfer is still under development.</div>
 <section class="grid">
 <article class="panel" id="sourcePanel"><h2>Model A · Source</h2><p class="sub">The model that contains the expressions to copy.</p><div class="drop" id="sourceDrop"><div class="fileicon">📤</div><strong>Choose source VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="sourceFile">Select VRM file</label><input id="sourceFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="sourceMeta"></div></article>
 <article class="panel" id="targetPanel"><h2>Model B · Target</h2><p class="sub">The model that will receive the expressions.</p><div class="drop" id="targetDrop"><div class="fileicon">📥</div><strong>Choose target VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="targetFile">Select VRM file</label><input id="targetFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="targetMeta"></div></article>
 </section>
-<div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
+<section class="panel" style="margin-top:14px" id="meshSelectionPanel"><h2>Manual Mesh Selection</h2><p class="sub">Choose source mesh(es) in Model A and destination mesh(es) in Model B.</p><div class="grid"><div><h2 style="font-size:14px">Source meshes · Model A</h2><div id="sourceMeshList" class="empty">Load Model A to list its meshes.</div></div><div><h2 style="font-size:14px">Target meshes · Model B</h2><div id="targetMeshList" class="empty">Load Model B to list its meshes.</div></div></div><div class="status" id="meshSelectionStatus">Select meshes after loading both VRM files. Transfer is not implemented yet.</div></section><div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
 <div id="status" class="status">Select two VRM 0.x files to begin.</div>
 <section class="results"><h2>BlendShape overview</h2><div id="overview" class="empty">No model data yet.</div></section>
 </main>
@@ -64,9 +65,31 @@ function inspect(json,file){
  const binds=groups.reduce((n,g)=>n+(g.binds?.length||0),0);
  return {name:vrm.meta?.title||file.name,author:vrm.meta?.author||'—',version:'VRM 0.x',modelVersion,groups,binds,morphCount,meshCount,meshes:meshes.length,nodes:(json.nodes||[]).length};
 }
+function renderMeshChoices(which){
+ const model=state[which],root=$(which+'MeshList');
+ if(!model){root.className='empty';root.textContent='Load Model '+(which==='source'?'A':'B')+' to list its meshes.';return;}
+ const meshes=model.json.meshes||[];
+ if(!meshes.length){root.className='empty';root.textContent='No glTF meshes found.';return;}
+ root.className='mesh-options';
+ root.innerHTML=meshes.map((mesh,i)=>{
+  const primitives=mesh.primitives||[];
+  const morphs=primitives.reduce((n,p)=>n+(p.targets?.length||0),0);
+  const name=mesh.name||('Mesh '+i);
+  return '<label class="mesh-option"><input type="checkbox" data-mesh-index="'+i+'"><span class="mesh-copy"><b>'+esc(name)+'</b><small>Mesh #'+i+' · '+primitives.length+' primitive(s) · '+morphs+' morph target(s)</small></span></label>';
+ }).join('');
+ root.querySelectorAll('input[data-mesh-index]').forEach(input=>input.addEventListener('change',()=>{
+  const selected=new Set(model.selectedMeshes||[]),index=Number(input.dataset.meshIndex);
+  if(input.checked)selected.add(index);else selected.delete(index);
+  model.selectedMeshes=[...selected].sort((a,b)=>a-b);updateMeshSelectionStatus();
+ }));
+}
+function updateMeshSelectionStatus(){
+ const a=state.source?.selectedMeshes||[],b=state.target?.selectedMeshes||[];
+ $('meshSelectionStatus').textContent='Selected: '+a.length+' source mesh(es) and '+b.length+' target mesh(es). Select meshes independently on both sides.';
+}
 function renderMeta(which,data){const el=$(which+'Meta');el.className='meta show';el.innerHTML='<div class="meta-row"><span>Model</span><span>'+esc(data.name)+'</span></div><div class="meta-row"><span>Author</span><span>'+esc(data.author)+'</span></div><div class="meta-row"><span>VRM format</span><span>'+esc(data.version)+'</span></div><div class="meta-row"><span>Model version</span><span>'+esc(data.modelVersion)+'</span></div><div class="stats"><div class="stat"><b>'+data.groups.length+'</b>Groups</div><div class="stat"><b>'+data.binds+'</b>Binds</div><div class="stat"><b>'+data.morphCount+'</b>Morph targets</div><div class="stat"><b>'+data.meshCount+'</b>Meshes with morphs</div></div>'}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data};renderMeta(which,data);$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
+async function load(which,file){if(!file)return;try{if(!file.name.toLowerCase().endsWith('.vrm'))throw Error('Please choose a .vrm file.');const buffer=await file.arrayBuffer();const parsed=readGLB(buffer);const data=inspect(parsed.json,file);state[which]={file,buffer,json:parsed.json,bin:parsed.bin,data,selectedMeshes:[]};renderMeta(which,data);renderMeshChoices(which);updateMeshSelectionStatus();$(which+'Drop').classList.remove('active');$('status').className='status ok';$('status').textContent=which==='source'?'Source model loaded.':'Target model loaded.';updateButtons();}catch(e){state[which]=null;$(which+'Meta').className='meta';renderMeshChoices(which);updateMeshSelectionStatus();$('status').className='status err';$('status').textContent=e.message;updateButtons();}}
 function updateButtons(){$('analyzeBtn').disabled=!(state.source&&state.target);$('exportBtn').disabled=!state.target;}
 $('sourceFile').addEventListener('change',e=>load('source',e.target.files[0]));$('targetFile').addEventListener('change',e=>load('target',e.target.files[0]));
 ['source','target'].forEach(k=>{const d=$(k+'Drop');d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('active')});d.addEventListener('dragleave',()=>d.classList.remove('active'));d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('active');const f=e.dataTransfer.files[0];load(k,f);});});
@@ -103,6 +126,6 @@ $('exportBtn').addEventListener('click',exportTarget);
 $('analyzeBtn').addEventListener('click',()=>{const a=state.source.data,b=state.target.data;const namesA=a.groups.map(g=>g.name||'(unnamed)');const namesB=new Set(b.groups.map(g=>g.name||'(unnamed)'));const matched=namesA.filter(n=>namesB.has(n));const onlyA=namesA.filter(n=>!namesB.has(n));const onlyB=b.groups.map(g=>g.name||'(unnamed)').filter(n=>!new Set(namesA).has(n));let html='<div class="stats"><div class="stat"><b>'+matched.length+'</b>Same-name groups</div><div class="stat"><b>'+onlyA.length+'</b>Source-only</div><div class="stat"><b>'+onlyB.length+'</b>Target-only</div></div><div class="group-list" style="margin-top:12px">';
 a.groups.forEach(g=>{const n=g.name||'(unnamed)';html+='<div class="group"><div class="group-top"><span>'+esc(n)+'</span><span class="pill">'+(namesB.has(n)?'Name match':'Source only')+'</span></div><div class="binds">'+(g.binds?.length||0)+' mesh bind(s) · '+(g.materialValues?.length||0)+' material value(s)</div></div>';});
 html+='</div>';if(!a.groups.length)html='<div class="empty">The source model has no VRM 0.x BlendShape groups.</div>';$('overview').className='';$('overview').innerHTML=html;$('status').className='status ok';$('status').textContent='Analysis complete. This build compares group names and reads bind metadata; it does not modify either file yet.';});
-$('clearBtn').addEventListener('click',()=>{state.source=state.target=null;['source','target'].forEach(k=>{$(k+'File').value='';$(k+'Meta').className='meta';});$('overview').className='empty';$('overview').textContent='No model data yet.';$('status').className='status';$('status').textContent='Select two VRM 0.x files to begin.';updateButtons();});
+$('clearBtn').addEventListener('click',()=>{state.source=state.target=null;['source','target'].forEach(k=>{$(k+'File').value='';$(k+'Meta').className='meta';renderMeshChoices(k);});updateMeshSelectionStatus();$('overview').className='empty';$('overview').textContent='No model data yet.';$('status').className='status';$('status').textContent='Select two VRM 0.x files to begin.';updateButtons();});
 </script>
 </body></html>
