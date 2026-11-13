@@ -305,10 +305,28 @@ async function transferFaceBlendShapes(){
   // The previous implementation repeated KD-tree queries and triangle scans
   // for every expression group, making Android transfers extremely slow.
   const transferMaps=[];
+  // Match primitives by their normalized spatial signature, not array order.
+  // This is important when the face skin and inner-mouth primitives are ordered differently.
+  const signature=points=>{
+   const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+   for(let i=0;i<points.length;i+=3)for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],points[i+k]);hi[k]=Math.max(hi[k],points[i+k]);}
+   return {center:lo.map((v,k)=>(v+hi[k])*0.5),size:lo.map((v,k)=>hi[k]-v)};
+  };
+  const srcSignatures=normalizedSource.map(signature),dstSignatures=normalizedTarget.map(signature);
+  const primitiveMatches=dstSignatures.map(ds=>{
+   let best=0,bestScore=Infinity;
+   srcSignatures.forEach((ss,i)=>{
+    const center=ss.center.reduce((n,v,k)=>n+(v-ds.center[k])**2,0);
+    const size=ss.size.reduce((n,v,k)=>n+(v-ds.size[k])**2,0);
+    const score=center+size*0.35;
+    if(score<bestScore){bestScore=score;best=i;}
+   });
+   return best;
+  });
   let totalVertices=dstPositions.reduce((n,a)=>n+a.length/3,0),mappedVertices=0;
   for(let pi=0;pi<dstPrims.length;pi++){
    const base=dstPositions[pi],normalized=normalizedTarget[pi];
-   const sourcePi=srcPrims.length===dstPrims.length?pi:Math.min(pi,srcPrims.length-1);
+   const sourcePi=primitiveMatches[pi];
    const surface=sourceSurfaces[sourcePi],map=new Array(base.length/3);
    for(let v=0;v<map.length;v++){
     const p=[normalized[v*3],normalized[v*3+1],normalized[v*3+2]];
@@ -324,8 +342,12 @@ async function transferFaceBlendShapes(){
      const hit=closestPointTriangle(p,a,b,c);
      if(hit.d<bestDistance){bestDistance=hit.d;best={tri,w:hit.w};}
     }
-    if(best){map[v]={tri:best.tri,w:best.w};}
-    else map[v]={nearby:nearby.map(n=>({index:n.index,weight:1/Math.max(n.d,1e-8)}))};
+    // Reject low-confidence matches rather than pulling unrelated mouth/inner-mouth
+    // vertices across the face. Distances are squared in uniformly normalized space.
+    const maxMatchDistanceSq=0.0025;
+    if(best&&bestDistance<=maxMatchDistanceSq){map[v]={tri:best.tri,w:best.w};}
+    else if(!best&&nearby.length&&nearby[0].d<=maxMatchDistanceSq){map[v]={nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,weight:1/Math.max(n.d,1e-8)}))};}
+    else map[v]={unmatched:true};
     mappedVertices++;
     if((mappedVertices%192)===0){progress('Preparing face mapping… '+mappedVertices.toLocaleString()+' / '+totalVertices.toLocaleString()+' vertices');await yieldUI();}
    }
