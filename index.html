@@ -274,40 +274,37 @@ function transferFaceBlendShapes(){
   const srcBounds=boundsFor(srcPositions),dstBounds=boundsFor(dstPositions);
   const normalizedSource=srcPositions.map(a=>normalizePositions(a,srcBounds));
   const normalizedTarget=dstPositions.map(a=>normalizePositions(a,dstBounds));
-  const sourcePoints=[];for(const arr of normalizedSource)for(let i=0;i<arr.length;i+=3)sourcePoints.push(arr[i],arr[i+1],arr[i+2]);
-  if(!sourcePoints.length)throw Error('Source face mesh contains no vertices.');
-  const sourcePointArray=new Float32Array(sourcePoints),tree=buildKD(sourcePointArray,Array.from({length:sourcePointArray.length/3},(_,i)=>i));
-  // Build a local triangle neighborhood for surface-aware interpolation.
-  const sourceTriangles=[],vertexTriangles=Array.from({length:sourcePointArray.length/3},()=>[]);
-  let sourceVertexOffset=0;
-  srcPrims.forEach((prim,pi)=>{
-   const count=srcPositions[pi].length/3,indices=prim.indices===undefined?Uint32Array.from({length:count},(_,i)=>i):readIndexAccessor(source,prim.indices,count);
+  // Keep material primitives isolated: skin and inner-mouth surfaces
+  // can overlap spatially but must never share candidate triangles.
+  const sourceSurfaces=srcPrims.map((prim,pi)=>{
+   const points=normalizedSource[pi],count=points.length/3;
+   const tree=buildKD(points,Array.from({length:count},(_,i)=>i));
+   const triangles=[],vertexTriangles=Array.from({length:count},()=>[]);
+   const indices=prim.indices===undefined?Uint32Array.from({length:count},(_,i)=>i):readIndexAccessor(source,prim.indices,count);
    if(prim.mode===undefined||prim.mode===4){
     for(let k=0;k+2<indices.length;k+=3){
-     const tri=[sourceVertexOffset+indices[k],sourceVertexOffset+indices[k+1],sourceVertexOffset+indices[k+2]],ti=sourceTriangles.length;
-     if(tri.every(v=>v>=sourceVertexOffset&&v<sourceVertexOffset+count)){sourceTriangles.push(tri);tri.forEach(v=>vertexTriangles[v].push(ti));}
+     const tri=[indices[k],indices[k+1],indices[k+2]],ti=triangles.length;
+     if(tri.every(v=>v>=0&&v<count)){triangles.push(tri);tri.forEach(v=>vertexTriangles[v].push(ti));}
     }
    }
-   sourceVertexOffset+=count;
+   return {points,tree,triangles,vertexTriangles};
   });
   const selected=(source.selectedGroups||[]).map(i=>({index:i,group:source.data.groups[i]})).filter(x=>x.group);
   if(!selected.length)throw Error('Select at least one facial BlendShape Group.');
   const groupsToCopy=selected.map(({index,group})=>{
    const binds=(group.binds||[]).filter(b=>b.mesh===srcMeshIndex);
    if(!binds.length)return null;
-   const delta=new Float32Array(sourcePointArray.length);
-   let offset=0;
-   srcPrims.forEach((prim,pi)=>{
-    const count=srcPositions[pi].length/3;
+   const deltas=srcPrims.map((prim,pi)=>{
+    const count=srcPositions[pi].length/3,delta=new Float32Array(count*3);
     for(const bind of binds){
      const targetDef=prim.targets?.[bind.index];
      if(!targetDef?.POSITION)continue;
      const d=readVec3Accessor(source,targetDef.POSITION),weight=(Number(bind.weight??100))/100;
-     for(let j=0;j<Math.min(d.length, count*3);j++)delta[offset+j]+=d[j]*weight;
+     for(let j=0;j<Math.min(d.length,count*3);j++)delta[j]+=d[j]*weight;
     }
-    offset+=count*3;
+    return delta;
    });
-   return {index,group,delta};
+   return {index,group,deltas};
   }).filter(Boolean);
   if(!groupsToCopy.length)throw Error('None of the selected groups has a bind for the selected source mesh. Choose the face mesh used by those groups.');
   let nextIndex=Math.max(0,...dstPrims.map(p=>(p.targets||[]).length));
@@ -330,23 +327,20 @@ function transferFaceBlendShapes(){
    const newPreset=existingPresets.has(preset)&&preset!=='unknown'?'unknown':(item.group.presetName||'unknown');
    for(let pi=0;pi<dstPrims.length;pi++){
     const base=dstPositions[pi],normalized=normalizedTarget[pi],mapped=new Float32Array(base.length);
+    const sourcePi=srcPrims.length===dstPrims.length?pi:Math.min(pi,srcPrims.length-1);
+    const surface=sourceSurfaces[sourcePi],sourceDelta=item.deltas[sourcePi];
     for(let v=0;v<base.length/3;v++){
-     const px=normalized[v*3],py=normalized[v*3+1],pz=normalized[v*3+2],nearby=nearestKDK(tree,sourcePointArray,px,py,pz,10);
+     const px=normalized[v*3],py=normalized[v*3+1],pz=normalized[v*3+2],nearby=nearestKDK(surface.tree,surface.points,px,py,pz,10);
      let sampled=[0,0,0],bestDistance=Infinity;
-     // Union triangles attached to the 10 nearest vertices. This gives the
-     // closest-surface search enough local alternatives around lips/mouth.
      const candidateSet=new Set();
-     for(const near of nearby)for(const ti of vertexTriangles[near.index])candidateSet.add(ti);
-     const candidates=[...candidateSet];
-     for(const ti of candidates){
-      const tri=sourceTriangles[ti],a=[sourcePointArray[tri[0]*3],sourcePointArray[tri[0]*3+1],sourcePointArray[tri[0]*3+2]],b=[sourcePointArray[tri[1]*3],sourcePointArray[tri[1]*3+1],sourcePointArray[tri[1]*3+2]],c=[sourcePointArray[tri[2]*3],sourcePointArray[tri[2]*3+1],sourcePointArray[tri[2]*3+2]],hit=closestPointTriangle([px,py,pz],a,b,c);
-      if(hit.d<bestDistance){bestDistance=hit.d;sampled=[0,1,2].map(axis=>hit.w[0]*item.delta[tri[0]*3+axis]+hit.w[1]*item.delta[tri[1]*3+axis]+hit.w[2]*item.delta[tri[2]*3+axis]);}
+     for(const near of nearby)for(const ti of surface.vertexTriangles[near.index])candidateSet.add(ti);
+     for(const ti of candidateSet){
+      const tri=surface.triangles[ti],a=[surface.points[tri[0]*3],surface.points[tri[0]*3+1],surface.points[tri[0]*3+2]],b=[surface.points[tri[1]*3],surface.points[tri[1]*3+1],surface.points[tri[1]*3+2]],c=[surface.points[tri[2]*3],surface.points[tri[2]*3+1],surface.points[tri[2]*3+2]],hit=closestPointTriangle([px,py,pz],a,b,c);
+      if(hit.d<bestDistance){bestDistance=hit.d;sampled=[0,1,2].map(axis=>hit.w[0]*sourceDelta[tri[0]*3+axis]+hit.w[1]*sourceDelta[tri[1]*3+axis]+hit.w[2]*sourceDelta[tri[2]*3+axis]);}
      }
      if(bestDistance===Infinity&&nearby.length){
-      // Fallback: blend several nearby source deltas instead of copying one
-      // vertex abruptly, which can create spikes across a mismatched mouth.
       let total=0;
-      for(const near of nearby){const w=1/Math.max(near.d,1e-8);total+=w;for(let axis=0;axis<3;axis++)sampled[axis]+=item.delta[near.index*3+axis]*w;}
+      for(const near of nearby){const w=1/Math.max(near.d,1e-8);total+=w;for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*w;}
       if(total)sampled=sampled.map(value=>value/total);
      }
      const scaleX=dstBounds.size[0]/srcBounds.size[0],scaleY=dstBounds.size[1]/srcBounds.size[1],scaleZ=dstBounds.size[2]/srcBounds.size[2];
