@@ -133,13 +133,41 @@ $('sourceFile').addEventListener('change',e=>load('source',e.target.files[0]));$
 function readVec3Accessor(model,accessorIndex){
  const json=model.json,acc=json.accessors?.[accessorIndex];
  if(!acc||acc.type!=='VEC3'||acc.componentType!==5126)throw Error('Face transfer requires FLOAT VEC3 POSITION data.');
- if(acc.sparse)throw Error('Sparse POSITION accessors are not supported yet.');
- const bv=json.bufferViews?.[acc.bufferView];
- if(!bv||!model.bin)throw Error('A mesh POSITION or Morph Target buffer is missing.');
- const stride=bv.byteStride||12,base=(bv.byteOffset||0)+(acc.byteOffset||0);
+ if(!model.bin)throw Error('A mesh POSITION or Morph Target buffer is missing.');
  const view=new DataView(model.bin.buffer,model.bin.byteOffset,model.bin.byteLength);
  const out=new Float32Array(acc.count*3);
- for(let i=0;i<acc.count;i++)for(let k=0;k<3;k++)out[i*3+k]=view.getFloat32(base+i*stride+k*4,true);
+ // An accessor without a base bufferView is initialized to zero, as required by glTF.
+ if(acc.bufferView!==undefined){
+  const bv=json.bufferViews?.[acc.bufferView];
+  if(!bv)throw Error('A POSITION bufferView is missing.');
+  const stride=bv.byteStride||12,base=(bv.byteOffset||0)+(acc.byteOffset||0);
+  for(let i=0;i<acc.count;i++)for(let k=0;k<3;k++){
+   const at=base+i*stride+k*4;
+   if(at+4>view.byteLength)throw Error('POSITION accessor exceeds its buffer.');
+   out[i*3+k]=view.getFloat32(at,true);
+  }
+ }
+ // Sparse accessors override selected elements in the base accessor.
+ if(acc.sparse){
+  const sparse=acc.sparse,count=sparse.count||0;
+  const indexView=json.bufferViews?.[sparse.indices?.bufferView];
+  const valueView=json.bufferViews?.[sparse.values?.bufferView];
+  if(!indexView||!valueView)throw Error('Sparse POSITION accessor is missing an indices or values bufferView.');
+  const indexType=sparse.indices.componentType;
+  const indexSize=indexType===5121?1:indexType===5123?2:indexType===5125?4:0;
+  if(!indexSize)throw Error('Sparse POSITION indices must use UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT.');
+  const indexBase=(indexView.byteOffset||0)+(sparse.indices.byteOffset||0);
+  const valueBase=(valueView.byteOffset||0)+(sparse.values.byteOffset||0);
+  for(let i=0;i<count;i++){
+   const ip=indexBase+i*indexSize;
+   if(ip+indexSize>view.byteLength)throw Error('Sparse POSITION index data exceeds its buffer.');
+   const vertex=indexSize===1?view.getUint8(ip):indexSize===2?view.getUint16(ip,true):view.getUint32(ip,true);
+   if(vertex>=acc.count)throw Error('Sparse POSITION index is outside the accessor vertex range.');
+   const vp=valueBase+i*12;
+   if(vp+12>view.byteLength)throw Error('Sparse POSITION values exceed their buffer.');
+   for(let k=0;k<3;k++)out[vertex*3+k]=view.getFloat32(vp+k*4,true);
+  }
+ }
  return out;
 }
 function readIndexAccessor(model,accessorIndex,count){
