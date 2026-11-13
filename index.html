@@ -203,11 +203,16 @@ function boundsFor(parts){
  const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
  for(const arr of parts)for(let i=0;i<arr.length;i+=3)for(let k=0;k<3;k++){const v=arr[i+k];if(v<min[k])min[k]=v;if(v>max[k])max[k]=v;}
  const size=max.map((v,k)=>Math.max(v-min[k],1e-8));
- return {min,size};
+ // Use ONE uniform scale for all axes. Independent XYZ normalization
+ // changes facial proportions and can shift mouth/eye surface correspondence
+ // when the source and target have different head proportions.
+ const center=min.map((v,k)=>(v+max[k])*0.5);
+ const uniformScale=Math.max(...size,1e-8);
+ return {min,size,center,uniformScale};
 }
 function normalizePositions(arr,bounds){
  const out=new Float32Array(arr.length);
- for(let i=0;i<arr.length;i+=3)for(let k=0;k<3;k++)out[i+k]=(arr[i+k]-bounds.min[k])/bounds.size[k];
+ for(let i=0;i<arr.length;i+=3)for(let k=0;k<3;k++)out[i+k]=(arr[i+k]-bounds.center[k])/bounds.uniformScale;
  return out;
 }
 function buildKD(points,ids,depth=0){
@@ -326,7 +331,9 @@ async function transferFaceBlendShapes(){
    }
    transferMaps.push({sourcePi,map});
   }
-  const scaleX=dstBounds.size[0]/srcBounds.size[0],scaleY=dstBounds.size[1]/srcBounds.size[1],scaleZ=dstBounds.size[2]/srcBounds.size[2];
+  // Morph deltas use the same uniform scale as the geometry mapping.
+  // Avoid per-axis scaling, which can stretch mouth opening and lip motion.
+  const morphScale=dstBounds.uniformScale/srcBounds.uniformScale;
   const selected=(source.selectedGroups||[]).map(i=>({index:i,group:source.data.groups[i]})).filter(x=>x.group);
   if(!selected.length)throw Error('Select at least one facial BlendShape Group.');
   const groupsToCopy=selected.map(({index,group})=>{
@@ -378,7 +385,7 @@ async function transferFaceBlendShapes(){
       for(const near of entry.nearby){total+=near.weight;for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*near.weight;}
       if(total)sampled=sampled.map(value=>value/total);
      }
-     mapped[v*3]=sampled[0]*scaleX;mapped[v*3+1]=sampled[1]*scaleY;mapped[v*3+2]=sampled[2]*scaleZ;
+     mapped[v*3]=sampled[0]*morphScale;mapped[v*3+1]=sampled[1]*morphScale;mapped[v*3+2]=sampled[2]*morphScale;
      if((v%768)===767){progress('Copying '+String(item.group.name||('Face_'+item.index))+'… '+(v+1).toLocaleString()+' / '+(base.length/3).toLocaleString()+' vertices');await yieldUI();}
     }
     const accessor=appendFloatVec3(target,mapped);
