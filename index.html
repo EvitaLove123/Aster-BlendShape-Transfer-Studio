@@ -257,7 +257,13 @@ function appendFloatVec3(model,values){
  model.json.buffers[0].byteLength=joined.length;
  return accessor;
 }
-function transferFaceBlendShapes(){
+async function transferFaceBlendShapes(){
+ const btn=$('transferFaceBtn');
+ if(btn.disabled)return;
+ btn.disabled=true;
+ const originalButtonText=btn.textContent;
+ const yieldUI=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+ const progress=(message)=>{$('transferStatus').className='status';$('transferStatus').textContent=message;$('status').className='status';$('status').textContent=message;};
  try{
   const source=state.source,target=state.target;
   if(!source||!target)throw Error('Load Model A and Model B first.');
@@ -292,7 +298,9 @@ function transferFaceBlendShapes(){
   // Build the geometric correspondence ONCE per target primitive.
   // The previous implementation repeated KD-tree queries and triangle scans
   // for every expression group, making Android transfers extremely slow.
-  const transferMaps=dstPrims.map((prim,pi)=>{
+  const transferMaps=[];
+  let totalVertices=dstPositions.reduce((n,a)=>n+a.length/3,0),mappedVertices=0;
+  for(let pi=0;pi<dstPrims.length;pi++){
    const base=dstPositions[pi],normalized=normalizedTarget[pi];
    const sourcePi=srcPrims.length===dstPrims.length?pi:Math.min(pi,srcPrims.length-1);
    const surface=sourceSurfaces[sourcePi],map=new Array(base.length/3);
@@ -312,9 +320,11 @@ function transferFaceBlendShapes(){
     }
     if(best){map[v]={tri:best.tri,w:best.w};}
     else map[v]={nearby:nearby.map(n=>({index:n.index,weight:1/Math.max(n.d,1e-8)}))};
+    mappedVertices++;
+    if((mappedVertices%192)===0){progress('Preparing face mapping… '+mappedVertices.toLocaleString()+' / '+totalVertices.toLocaleString()+' vertices');await yieldUI();}
    }
-   return {sourcePi,map};
-  });
+   transferMaps.push({sourcePi,map});
+  }
   const scaleX=dstBounds.size[0]/srcBounds.size[0],scaleY=dstBounds.size[1]/srcBounds.size[1],scaleZ=dstBounds.size[2]/srcBounds.size[2];
   const selected=(source.selectedGroups||[]).map(i=>({index:i,group:source.data.groups[i]})).filter(x=>x.group);
   if(!selected.length)throw Error('Select at least one facial BlendShape Group.');
@@ -347,8 +357,11 @@ function transferFaceBlendShapes(){
   const existingNames=new Set(existing.map(g=>String(g.name||'')));
   const existingPresets=new Set(existing.map(g=>String(g.presetName||'unknown').toLowerCase()));
   const added=[];
+  let copiedGroups=0;
   for(const item of groupsToCopy){
    const morphIndex=nextIndex++,baseName=String(item.group.name||('Face_'+item.index));
+   progress('Copying BlendShapes… '+(copiedGroups+1)+' / '+groupsToCopy.length+' · '+baseName);
+   await yieldUI();
    let newName=baseName,serial=2;while(existingNames.has(newName))newName=baseName+'_Copy'+serial++;
    const preset=String(item.group.presetName||'unknown').toLowerCase();
    const newPreset=existingPresets.has(preset)&&preset!=='unknown'?'unknown':(item.group.presetName||'unknown');
@@ -365,6 +378,7 @@ function transferFaceBlendShapes(){
       if(total)sampled=sampled.map(value=>value/total);
      }
      mapped[v*3]=sampled[0]*scaleX;mapped[v*3+1]=sampled[1]*scaleY;mapped[v*3+2]=sampled[2]*scaleZ;
+     if((v%768)===767){progress('Copying '+String(item.group.name||('Face_'+item.index))+'… '+(v+1).toLocaleString()+' / '+(base.length/3).toLocaleString()+' vertices');await yieldUI();}
     }
     const accessor=appendFloatVec3(target,mapped);
     dstPrims[pi].targets[morphIndex]={...(dstPrims[pi].targets[morphIndex]||{}),POSITION:accessor};
@@ -373,6 +387,7 @@ function transferFaceBlendShapes(){
    existing.push({name:newName,presetName:newPreset,isBinary:!!item.group.isBinary,binds:[{mesh:dstMeshIndex,index:morphIndex,weight:100}],materialValues:[]});
    existingNames.add(newName);if(newPreset!=='unknown')existingPresets.add(String(newPreset).toLowerCase());
    added.push(newName);
+   copiedGroups++;
   }
   dstMesh.extras.targetNames=names;
   target.transferred=true;
@@ -384,6 +399,9 @@ function transferFaceBlendShapes(){
  }catch(e){
   $('transferStatus').className='status err';$('transferStatus').textContent='Face transfer failed: '+e.message;
   $('status').className='status err';$('status').textContent='Face transfer failed: '+e.message;
+ }finally{
+  btn.textContent=originalButtonText;
+  updateTransferControls();
  }
 }
 function buildGLB(json,bin){
