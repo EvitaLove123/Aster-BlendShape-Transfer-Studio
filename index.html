@@ -226,6 +226,21 @@ function nearestKD(node,points,x,y,z,best={index:-1,d:Infinity}){
  if(delta*delta<best.d)nearestKD(far,points,x,y,z,best);
  return best;
 }
+// Return several nearby source vertices so surface matching is not locked to
+// the triangles attached to one possibly-wrong vertex (a common mouth failure).
+function nearestKDK(node,points,x,y,z,k=10,found=[]){
+ if(!node)return found;
+ const i=node.index,dx=points[i*3]-x,dy=points[i*3+1]-y,dz=points[i*3+2]-z,d=dx*dx+dy*dy+dz*dz;
+ if(found.length<k||d<found[found.length-1].d){
+  found.push({index:i,d});found.sort((a,b)=>a.d-b.d);
+  if(found.length>k)found.pop();
+ }
+ const delta=[x,y,z][node.axis]-points[i*3+node.axis],near=delta<0?node.left:node.right,far=delta<0?node.right:node.left;
+ nearestKDK(near,points,x,y,z,k,found);
+ const limit=found.length<k?Infinity:found[found.length-1].d;
+ if(delta*delta<limit)nearestKDK(far,points,x,y,z,k,found);
+ return found;
+}
 function appendFloatVec3(model,values){
  const old=model.bin||new Uint8Array(0),pad=(4-old.length%4)%4,offset=old.length+pad;
  const bytes=new Uint8Array(values.length*4);
@@ -316,14 +331,24 @@ function transferFaceBlendShapes(){
    for(let pi=0;pi<dstPrims.length;pi++){
     const base=dstPositions[pi],normalized=normalizedTarget[pi],mapped=new Float32Array(base.length);
     for(let v=0;v<base.length/3;v++){
-     const px=normalized[v*3],py=normalized[v*3+1],pz=normalized[v*3+2],nearest=nearestKD(tree,sourcePointArray,px,py,pz);
+     const px=normalized[v*3],py=normalized[v*3+1],pz=normalized[v*3+2],nearby=nearestKDK(tree,sourcePointArray,px,py,pz,10);
      let sampled=[0,0,0],bestDistance=Infinity;
-     const candidates=nearest.index>=0?vertexTriangles[nearest.index]:[];
+     // Union triangles attached to the 10 nearest vertices. This gives the
+     // closest-surface search enough local alternatives around lips/mouth.
+     const candidateSet=new Set();
+     for(const near of nearby)for(const ti of vertexTriangles[near.index])candidateSet.add(ti);
+     const candidates=[...candidateSet];
      for(const ti of candidates){
       const tri=sourceTriangles[ti],a=[sourcePointArray[tri[0]*3],sourcePointArray[tri[0]*3+1],sourcePointArray[tri[0]*3+2]],b=[sourcePointArray[tri[1]*3],sourcePointArray[tri[1]*3+1],sourcePointArray[tri[1]*3+2]],c=[sourcePointArray[tri[2]*3],sourcePointArray[tri[2]*3+1],sourcePointArray[tri[2]*3+2]],hit=closestPointTriangle([px,py,pz],a,b,c);
       if(hit.d<bestDistance){bestDistance=hit.d;sampled=[0,1,2].map(axis=>hit.w[0]*item.delta[tri[0]*3+axis]+hit.w[1]*item.delta[tri[1]*3+axis]+hit.w[2]*item.delta[tri[2]*3+axis]);}
      }
-     if(bestDistance===Infinity&&nearest.index>=0)sampled=[item.delta[nearest.index*3],item.delta[nearest.index*3+1],item.delta[nearest.index*3+2]];
+     if(bestDistance===Infinity&&nearby.length){
+      // Fallback: blend several nearby source deltas instead of copying one
+      // vertex abruptly, which can create spikes across a mismatched mouth.
+      let total=0;
+      for(const near of nearby){const w=1/Math.max(near.d,1e-8);total+=w;for(let axis=0;axis<3;axis++)sampled[axis]+=item.delta[near.index*3+axis]*w;}
+      if(total)sampled=sampled.map(value=>value/total);
+     }
      const scaleX=dstBounds.size[0]/srcBounds.size[0],scaleY=dstBounds.size[1]/srcBounds.size[1],scaleZ=dstBounds.size[2]/srcBounds.size[2];
      mapped[v*3]=sampled[0]*scaleX;mapped[v*3+1]=sampled[1]*scaleY;mapped[v*3+2]=sampled[2]*scaleZ;
     }
@@ -373,7 +398,7 @@ function exportTarget(){
   a.href=url;a.download=base+'_Exported.vrm';document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
   $('status').className='status ok';
-  $('status').textContent='Model B exported as VRM 0.x. This export preserves the target model; BlendShape transfer is not connected yet.';
+  $('status').textContent='Model B exported as VRM 0.x with the transferred facial BlendShapes.';
  }catch(e){$('status').className='status err';$('status').textContent='VRM export failed: '+e.message;}
 }
 $('exportBtn').addEventListener('click',exportTarget);$('downloadTargetBtn').addEventListener('click',exportTarget);$('quickDownloadBtn').addEventListener('click',exportTarget);$('transferFaceBtn').addEventListener('click',transferFaceBlendShapes);
