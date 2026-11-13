@@ -262,6 +262,7 @@ async function transferFaceBlendShapes(){
  if(btn.disabled)return;
  btn.disabled=true;
  const originalButtonText=btn.textContent;
+ btn.textContent='Processing…';
  const yieldUI=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  const progress=(message)=>{$('transferStatus').className='status';$('transferStatus').textContent=message;$('status').className='status';$('status').textContent=message;};
  try{
