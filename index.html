@@ -338,7 +338,7 @@ async function transferFaceBlendShapes(){
    // Build the geometric correspondence ONCE per target primitive.
    // The previous implementation repeated KD-tree queries and triangle scans
    // for every expression group, making Android transfers extremely slow.
-   const transferMaps=[];
+   // Use the outer transferMaps array so the copy stage can read each target primitive map.
    // Match primitives by their normalized spatial signature, not array order.
    // This is important when the face skin and inner-mouth primitives are ordered differently.
    const signature=points=>{
