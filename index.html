@@ -107,7 +107,7 @@ function updateTransferControls(){
  else if(a.length!==1||b.length!==1)$('transferStatus').textContent='Select exactly one source face mesh and one target face mesh.';
  else if(!groups.length)$('transferStatus').textContent='Select at least one facial BlendShape Group from Model A.';
  else if(state.target.transferred)$('transferStatus').textContent='A transfer has already been applied to this loaded Model B. Clear files before starting a fresh transfer.';
- else $('transferStatus').textContent='Ready: '+groups.length+' selected group(s), source mesh #'+a[0]+' → target mesh #'+b[0]+'.';
+ else $('transferStatus').textContent='';
 }
 function renderMeshChoices(which){
  const model=state[which],root=$(which+'MeshList');
