@@ -66,6 +66,13 @@ function inspect(json,file){
  const binds=groups.reduce((n,g)=>n+(g.binds?.length||0),0);
  return {name:vrm.meta?.title||file.name,author:vrm.meta?.author||'—',version:'VRM 0.x',modelVersion,groups,binds,morphCount,meshCount,meshes:meshes.length,nodes:(json.nodes||[]).length};
 }
+function isMouthBlendShape(group){
+ const name=String(group?.name||'').toLowerCase();
+ const preset=String(group?.presetName||'').toLowerCase();
+ // VRM vowel presets A/I/U/E/O and common mouth/lip phoneme naming.
+ return ['a','i','u','e','o'].includes(preset) ||
+  /mouth|lip|jaw|phoneme|viseme|vowel|fcl_mth|fcl_mouth|fcl_lip|aa|ih|ou|ee|oh/i.test(name+' '+preset);
+}
 function isFaceGroup(g){
  const preset=String(g.presetName||'').toLowerCase();
  const name=String(g.name||'').toLowerCase();
@@ -345,9 +352,13 @@ async function transferFaceBlendShapes(){
     // Reject low-confidence matches rather than pulling unrelated mouth/inner-mouth
     // vertices across the face. Distances are squared in uniformly normalized space.
     const maxMatchDistanceSq=0.0025;
-    if(best&&bestDistance<=maxMatchDistanceSq){map[v]={tri:best.tri,w:best.w};}
-    else if(!best&&nearby.length&&nearby[0].d<=maxMatchDistanceSq){map[v]={nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,weight:1/Math.max(n.d,1e-8)}))};}
-    else map[v]={unmatched:true};
+    if(best&&bestDistance<=maxMatchDistanceSq){
+     // Keep both the surface hit and the local vertex neighborhood. Mouth
+     // morphs use the neighborhood below to avoid brittle triangle-edge jumps.
+     map[v]={tri:best.tri,w:best.w,nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};
+    }else if(nearby.length&&nearby[0].d<=maxMatchDistanceSq){
+     map[v]={nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};
+    }else map[v]={unmatched:true};
     mappedVertices++;
     if((mappedVertices%192)===0){progress('Preparing face mapping… '+mappedVertices.toLocaleString()+' / '+totalVertices.toLocaleString()+' vertices');await yieldUI();}
    }
@@ -400,11 +411,23 @@ async function transferFaceBlendShapes(){
     const transferMap=transferMaps[pi],sourceDelta=item.deltas[transferMap.sourcePi];
     for(let v=0;v<base.length/3;v++){
      const entry=transferMap.map[v];let sampled=[0,0,0];
-     if(entry.tri){
+     const mouthGroup=isMouthBlendShape(item.group);
+     if(mouthGroup&&entry.nearby?.length){
+      // Mouth/lip shapes are highly localized. Smoothly interpolate the
+      // source displacement from nearby vertices instead of relying on one
+      // triangle, which can create spikes when lip topology differs.
+      let total=0;
+      for(const near of entry.nearby){
+       const weight=1/Math.max(near.d,0.000025);
+       total+=weight;
+       for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*weight;
+      }
+      if(total)sampled=sampled.map(value=>value/total);
+     }else if(entry.tri){
       for(let axis=0;axis<3;axis++)sampled[axis]=entry.w[0]*sourceDelta[entry.tri[0]*3+axis]+entry.w[1]*sourceDelta[entry.tri[1]*3+axis]+entry.w[2]*sourceDelta[entry.tri[2]*3+axis];
      }else if(entry.nearby?.length){
       let total=0;
-      for(const near of entry.nearby){total+=near.weight;for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*near.weight;}
+      for(const near of entry.nearby){const weight=1/Math.max(near.d,0.000025);total+=weight;for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*weight;}
       if(total)sampled=sampled.map(value=>value/total);
      }
      mapped[v*3]=sampled[0]*morphScale;mapped[v*3+1]=sampled[1]*morphScale;mapped[v*3+2]=sampled[2]*morphScale;
