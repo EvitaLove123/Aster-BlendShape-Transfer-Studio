@@ -437,7 +437,10 @@ async function transferFaceBlendShapes(){
    const newPreset=existingPresets.has(preset)&&preset!=='unknown'?'unknown':(item.group.presetName||'unknown');
    for(let pi=0;pi<dstPrims.length;pi++){
     const base=dstPositions[pi],mapped=new Float32Array(base.length);
-    const transferMap=transferMaps[pi],sourceDelta=item.deltas[transferMap.sourcePi];
+    const transferMap=transferMaps[pi];
+    if(!transferMap)throw Error('Missing transfer map for Model B primitive #'+pi+'. Built '+transferMaps.length+' map(s) for '+dstPrims.length+' primitive(s). Clear and reload both VRM models, then retry.');
+    const sourceDelta=item.deltas[transferMap.sourcePi];
+    if(!sourceDelta)throw Error('Source morph data is missing for Model A primitive #'+transferMap.sourcePi+'. Check that the selected face meshes contain matching primitive data.');
     for(let v=0;v<base.length/3;v++){
      const entry=transferMap.map[v];let sampled=[0,0,0];
      if(entry.direct!==undefined){
