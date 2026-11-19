@@ -17,7 +17,7 @@ Android-first, light-theme browser tool for transferring facial BlendShapes betw
 - [x] Facial BlendShape transfer for one selected source/target mesh pair
 - [x] Cross-topology surface-aware transfer using nearby source triangles and barycentric interpolation
 - [x] Manual source rotation controls (X/Y/Z) before surface matching
-- [x] Transfer strength control
+- [x] Global transfer strength and separate conservative mouth/vowel strength control (default 0.55×)
 - [x] Adjustable surface-match radius and minimum correspondence coverage gate
 - [x] Roll back target data if a transfer fails partway through
 - [x] Create target Morph Targets and VRM 0.x BlendShape Groups
@@ -31,7 +31,7 @@ Android-first, light-theme browser tool for transferring facial BlendShapes betw
 3. Choose the facial BlendShape Groups to copy from Model A.
 4. Run **Transfer Face BlendShapes**, then export Model B.
 
-The transfer samples the closest source vertices, examines adjacent source triangles, and interpolates morph deltas with barycentric weights onto target vertices. For different topologies, the app now provides manual source rotation (X/Y/Z), expression strength, match-radius, and minimum correspondence-coverage controls. Transfers below the selected coverage threshold are blocked instead of silently exporting mostly unmatched vertices. A failed transfer restores the in-memory target data. This remains approximate: it does not yet perform automatic facial landmark detection, full rigid landmark registration, or a true 3D preview. It depends on compatible face proportions, orientation, and mesh selection. Inspect every transferred expression in a VRM viewer before relying on the exported model.
+The transfer samples the closest source vertices, examines adjacent source triangles, and interpolates morph deltas with barycentric weights onto target vertices. For different topologies, the app now provides manual source rotation (X/Y/Z), global expression strength, separate mouth/vowel strength, match-radius, and minimum correspondence-coverage controls. Mouth/vowel deltas default to a reduced 0.55× strength to help avoid excessive lip closure on dissimilar face meshes; this is a mitigation control, not automatic lip landmark detection or a guarantee against incorrect correspondence. Transfers below the selected coverage threshold are blocked instead of silently exporting mostly unmatched vertices. A failed transfer restores the in-memory target data. This remains approximate: it does not yet perform automatic facial landmark detection, full rigid landmark registration, or a true 3D preview. It depends on compatible face proportions, orientation, and mesh selection. Inspect every transferred expression in a VRM viewer before relying on the exported model.
 
 ## Run
 Open `index.html` from a static web host such as GitHub Pages or Vercel. No build step is required for the current inspection prototype.
