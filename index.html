@@ -272,7 +272,7 @@ function appendFloatVec3(model,values){
  model.json.buffers[0].byteLength=joined.length;
  return accessor;
 }
-async async function transferFaceBlendShapes(){
+async function transferFaceBlendShapes(){
  const btn=$('transferFaceBtn');
  if(btn.disabled)return;
  btn.disabled=true;
