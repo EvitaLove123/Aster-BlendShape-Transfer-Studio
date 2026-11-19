@@ -22,7 +22,7 @@ input[type=file]{display:none}.pick{display:inline-flex;margin-top:13px;padding:
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin:17px 0}.btn{border:0;border-radius:12px;padding:12px 17px;font-weight:700;font-size:14px;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:#fff;border:1px solid var(--line);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
 .results{margin-top:16px}.results h2{font-size:18px;margin:0 0 10px}.empty{padding:22px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:15px;font-size:13px}
 .group-list{display:grid;gap:8px}.group{background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 13px}.group-top{display:flex;justify-content:space-between;gap:10px;font-weight:650;font-size:13px}.pill{font-size:11px;padding:3px 8px;border-radius:20px;background:#eef1ff;color:#5868c6;white-space:nowrap}.binds{font-size:12px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
-.status{padding:11px 13px;border-radius:12px;background:#f5f6fb;color:#626d86;font-size:13px;margin-top:12px}.status.ok{background:#edf9f3;color:var(--good)}.status.err{background:#fff0f1;color:var(--bad)}
+.status{padding:11px 13px;border-radius:12px;background:#f5f6fb;color:#626d86;font-size:13px;margin-top:12px}.status.ok{background:#edf9f3;color:var(--good)}.status.err{background:#fff0f1;color:var(--bad)}.tune-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tune-field{display:grid;gap:6px;padding:11px;border:1px solid var(--line);border-radius:12px;background:#fbfcff}.tune-field label{font-size:12px;font-weight:650}.tune-field input[type=number],.tune-field input[type=range]{width:100%}.tune-field input[type=number]{padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}.tune-value{font-size:11px;color:var(--muted)}@media(max-width:460px){.tune-grid{grid-template-columns:1fr}}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 @media(max-width:680px){.grid{grid-template-columns:1fr}header{padding-top:20px}.panel{padding:15px}}
 </style>
@@ -36,7 +36,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <article class="panel" id="sourcePanel"><h2>Model A · Source</h2><p class="sub">The model that contains the expressions to copy.</p><div class="drop" id="sourceDrop"><div class="fileicon">📤</div><strong>Choose source VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="sourceFile">Select VRM file</label><input id="sourceFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="sourceMeta"></div></article>
 <article class="panel" id="targetPanel"><h2>Model B · Target</h2><p class="sub">The model that will receive the expressions.</p><div class="drop" id="targetDrop"><div class="fileicon">📥</div><strong>Choose target VRM</strong><small>VRM 0.x · .vrm</small><label class="pick" for="targetFile">Select VRM file</label><input id="targetFile" type="file" accept=".vrm,model/gltf-binary"></div><div class="meta" id="targetMeta"></div><button class="btn primary" id="downloadTargetBtn" disabled style="width:100%;margin-top:14px">⬇ Download Model B (.vrm)</button></article>
 </section>
-<section class="panel" style="margin-top:14px" id="meshSelectionPanel"><h2>Manual Mesh Selection</h2><p class="sub">Choose source mesh(es) in Model A and destination mesh(es) in Model B.</p><div class="grid"><div><h2 style="font-size:14px">Source meshes · Model A</h2><div id="sourceMeshList" class="empty">Load Model A to list its meshes.</div></div><div><h2 style="font-size:14px">Target meshes · Model B</h2><div id="targetMeshList" class="empty">Load Model B to list its meshes.</div></div></div><div class="status" id="meshSelectionStatus">Select meshes after loading both VRM files. Transfer is not implemented yet.</div></section><section class="panel" style="margin-top:14px" id="faceGroupPanel"><h2>Face BlendShape Groups · Model A</h2><p class="sub">Facial groups are preselected automatically. You can tick or untick groups manually.</p><div id="faceGroupList" class="empty">Load Model A to list its BlendShape groups.</div></section><section class="panel" style="margin-top:14px"><h2>Transfer Face BlendShapes</h2><p class="sub">Choose exactly one source face mesh and one target face mesh. Matching vertex topology uses direct vertex-to-vertex deltas; otherwise surface-aware mapping is used. Missing target Morph Targets will be created.</p><button class="btn primary" id="transferFaceBtn" disabled style="width:100%">Transfer selected Face BlendShapes → Model B</button><div class="status" id="transferStatus">Load both VRM 0.x models and select one mesh on each side.</div></section><div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
+<section class="panel" style="margin-top:14px" id="meshSelectionPanel"><h2>Manual Mesh Selection</h2><p class="sub">Choose source mesh(es) in Model A and destination mesh(es) in Model B.</p><div class="grid"><div><h2 style="font-size:14px">Source meshes · Model A</h2><div id="sourceMeshList" class="empty">Load Model A to list its meshes.</div></div><div><h2 style="font-size:14px">Target meshes · Model B</h2><div id="targetMeshList" class="empty">Load Model B to list its meshes.</div></div></div><div class="status" id="meshSelectionStatus">Select meshes after loading both VRM files. Transfer is not implemented yet.</div></section><section class="panel" style="margin-top:14px" id="faceGroupPanel"><h2>Face BlendShape Groups · Model A</h2><p class="sub">Facial groups are preselected automatically. You can tick or untick groups manually.</p><div id="faceGroupList" class="empty">Load Model A to list its BlendShape groups.</div></section><section class="panel" style="margin-top:14px" id="alignmentPanel"><h2>Cross-Topology Alignment & Quality</h2><p class="sub">Adjust Model A local rotation before surface matching. Use small changes and test one expression at a time. This is manual alignment assistance, not automatic facial landmark detection.</p><div class="tune-grid"><div class="tune-field"><label for="rotateX">Source rotation X (degrees)</label><input id="rotateX" type="number" min="-180" max="180" step="1" value="0"></div><div class="tune-field"><label for="rotateY">Source rotation Y (degrees)</label><input id="rotateY" type="number" min="-180" max="180" step="1" value="0"></div><div class="tune-field"><label for="rotateZ">Source rotation Z (degrees)</label><input id="rotateZ" type="number" min="-180" max="180" step="1" value="0"></div><div class="tune-field"><label for="deltaStrength">Transferred expression strength</label><input id="deltaStrength" type="range" min="0.1" max="1.5" step="0.05" value="1"><span class="tune-value" id="deltaStrengthValue">1.00×</span></div><div class="tune-field"><label for="matchRadius">Surface match radius</label><input id="matchRadius" type="range" min="0.02" max="0.20" step="0.005" value="0.05"><span class="tune-value" id="matchRadiusValue">0.050 normalized units</span></div><div class="tune-field"><label for="minCoverage">Minimum mapped face coverage</label><input id="minCoverage" type="range" min="40" max="100" step="1" value="75"><span class="tune-value" id="minCoverageValue">75%</span></div></div><div class="status">Transfer is blocked when too few target vertices have a confident surface match. No automatic 100% accuracy is claimed.</div></section><section class="panel" style="margin-top:14px"><h2>Transfer Face BlendShapes</h2><p class="sub">Choose exactly one source face mesh and one target face mesh. Matching vertex topology uses direct vertex-to-vertex deltas; otherwise surface-aware mapping is used. Missing target Morph Targets will be created.</p><button class="btn primary" id="transferFaceBtn" disabled style="width:100%">Transfer selected Face BlendShapes → Model B</button><div class="status" id="transferStatus">Load both VRM 0.x models and select one mesh on each side.</div></section><div class="actions"><button class="btn primary" id="analyzeBtn" disabled>Analyze both models</button><button class="btn primary" id="exportBtn" disabled>Export Target VRM 0.x</button><button class="btn secondary" id="clearBtn">Clear files</button></div>
 <div id="status" class="status">Select two VRM 0.x files to begin.</div>
 <section class="results"><h2>BlendShape overview</h2><div id="overview" class="empty">No model data yet.</div></section>
 </main>
@@ -44,6 +44,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
 <script>
 const state={source:null,target:null};
 const $=id=>document.getElementById(id);
+function readTransferSettings(){return {rotation:[Number($('rotateX').value)||0,Number($('rotateY').value)||0,Number($('rotateZ').value)||0].map(v=>Math.max(-180,Math.min(180,v))*Math.PI/180),strength:Number($('deltaStrength').value)||1,radius:Number($('matchRadius').value)||0.05,minCoverage:Number($('minCoverage').value)||75};}
+function rotateVectorArray(values,rotation){const [x,y,z]=rotation,cx=Math.cos(x),sx=Math.sin(x),cy=Math.cos(y),sy=Math.sin(y),cz=Math.cos(z),sz=Math.sin(z),out=new Float32Array(values.length);for(let i=0;i<values.length;i+=3){let a=values[i],b=values[i+1],c=values[i+2];let y1=b*cx-c*sx,z1=b*sx+c*cx;let x2=a*cy+z1*sy,z2=-a*sy+z1*cy;out[i]=x2*cz-y1*sz;out[i+1]=x2*sz+y1*cz;out[i+2]=z2;}return out;}
+function rotatePositionsAroundCenter(values,rotation){const bounds=boundsFor([values]),center=bounds.center,local=new Float32Array(values.length);for(let i=0;i<values.length;i+=3){local[i]=values[i]-center[0];local[i+1]=values[i+1]-center[1];local[i+2]=values[i+2]-center[2];}const rotated=rotateVectorArray(local,rotation);for(let i=0;i<rotated.length;i+=3){rotated[i]+=center[0];rotated[i+1]+=center[1];rotated[i+2]+=center[2];}return rotated;}
 function readGLB(buffer){
  const v=new DataView(buffer);if(v.byteLength<20||v.getUint32(0,true)!==0x46546c67||v.getUint32(4,true)!==2)throw Error('Invalid GLB/VRM file.');
  const total=v.getUint32(8,true);if(total>v.byteLength)throw Error('The file appears truncated.');
@@ -269,17 +272,20 @@ function appendFloatVec3(model,values){
  model.json.buffers[0].byteLength=joined.length;
  return accessor;
 }
-async function transferFaceBlendShapes(){
+async async function transferFaceBlendShapes(){
  const btn=$('transferFaceBtn');
  if(btn.disabled)return;
  btn.disabled=true;
  const originalButtonText=btn.textContent;
+ let targetSnapshot=null,targetBinSnapshot=null;
  btn.textContent='Processing…';
  const yieldUI=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
  const progress=(message)=>{$('transferStatus').className='status';$('transferStatus').textContent=message;$('status').className='status';$('status').textContent=message;};
  try{
   const source=state.source,target=state.target;
   if(!source||!target)throw Error('Load Model A and Model B first.');
+  targetSnapshot=JSON.parse(JSON.stringify(target.json));targetBinSnapshot=target.bin?target.bin.slice():new Uint8Array(0);
+  const settings=readTransferSettings();
   const srcIds=source.selectedMeshes||[],dstIds=target.selectedMeshes||[];
   if(srcIds.length!==1||dstIds.length!==1)throw Error('Select exactly one source face mesh and one target face mesh.');
   if(target.transferred)throw Error('Clear and reload Model B before applying another transfer.');
@@ -288,7 +294,7 @@ async function transferFaceBlendShapes(){
   if(!srcMesh||!dstMesh)throw Error('Selected mesh was not found.');
   const srcPrims=srcMesh.primitives||[],dstPrims=dstMesh.primitives||[];
   if(!srcPrims.length||!dstPrims.length)throw Error('Selected mesh has no primitives.');
-  const srcPositions=srcPrims.map(p=>{if(p.attributes?.POSITION===undefined)throw Error('Source face mesh is missing POSITION data.');return readVec3Accessor(source,p.attributes.POSITION);});
+  const srcPositions=srcPrims.map(p=>{if(p.attributes?.POSITION===undefined)throw Error('Source face mesh is missing POSITION data.');return rotatePositionsAroundCenter(readVec3Accessor(source,p.attributes.POSITION),settings.rotation);});
   const dstPositions=dstPrims.map(p=>{if(p.attributes?.POSITION===undefined)throw Error('Target face mesh is missing POSITION data.');return readVec3Accessor(target,p.attributes.POSITION);});
   const srcBounds=boundsFor(srcPositions),dstBounds=boundsFor(dstPositions);
   // Prefer exact vertex-index transfer when both selected meshes have identical topology.
@@ -308,12 +314,12 @@ async function transferFaceBlendShapes(){
    }
   }
   const transferMaps=[];
-  let totalVertices=dstPositions.reduce((n,a)=>n+a.length/3,0),mappedVertices=0;
+  let totalVertices=dstPositions.reduce((n,a)=>n+a.length/3,0),mappedVertices=0,matchedVertices=0;
   if(directTopology){
    for(let pi=0;pi<dstPrims.length;pi++){
     const count=dstPositions[pi].length/3;
     transferMaps[pi]={sourcePi:directPrimitiveMap[pi],map:Array.from({length:count},(_,v)=>({direct:v}))};
-    mappedVertices+=count;
+    mappedVertices+=count;matchedVertices+=count;
    }
    progress('Identical vertex topology detected. Using direct vertex-to-vertex transfer.');
   }else{
@@ -378,13 +384,13 @@ async function transferFaceBlendShapes(){
      }
      // Reject low-confidence matches rather than pulling unrelated mouth/inner-mouth
      // vertices across the face. Distances are squared in uniformly normalized space.
-     const maxMatchDistanceSq=0.0025;
+     const maxMatchDistanceSq=settings.radius*settings.radius;
      if(best&&bestDistance<=maxMatchDistanceSq){
       // Keep both the surface hit and the local vertex neighborhood. Mouth
       // morphs use the neighborhood below to avoid brittle triangle-edge jumps.
-      map[v]={tri:best.tri,w:best.w,nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};
+      map[v]={tri:best.tri,w:best.w,nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};matchedVertices++;
      }else if(nearby.length&&nearby[0].d<=maxMatchDistanceSq){
-      map[v]={nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};
+      map[v]={nearby:nearby.filter(n=>n.d<=maxMatchDistanceSq).map(n=>({index:n.index,d:n.d}))};matchedVertices++;
      }else map[v]={unmatched:true};
      mappedVertices++;
      if((mappedVertices%192)===0){progress('Preparing face mapping… '+mappedVertices.toLocaleString()+' / '+totalVertices.toLocaleString()+' vertices');await yieldUI();}
@@ -395,6 +401,8 @@ async function transferFaceBlendShapes(){
    // Avoid per-axis scaling, which can stretch mouth opening and lip motion.
  
   }
+  const mappingCoverage=totalVertices?matchedVertices/totalVertices*100:0;
+  if(!directTopology&&mappingCoverage<settings.minCoverage)throw Error('Surface correspondence coverage is only '+mappingCoverage.toFixed(1)+'%. Required: '+settings.minCoverage+'%. Adjust source rotation or match radius, verify that the selected meshes are matching face surfaces, then retry.');
   const morphScale=directTopology?1:dstBounds.uniformScale/srcBounds.uniformScale;
   const selected=(source.selectedGroups||[]).map(i=>({index:i,group:source.data.groups[i]})).filter(x=>x.group);
   if(!selected.length)throw Error('Select at least one facial BlendShape Group.');
@@ -409,7 +417,7 @@ async function transferFaceBlendShapes(){
      const d=readVec3Accessor(source,targetDef.POSITION),weight=(Number(bind.weight??100))/100;
      for(let j=0;j<Math.min(d.length,count*3);j++)delta[j]+=d[j]*weight;
     }
-    return delta;
+    return rotateVectorArray(delta,settings.rotation);
    });
    return {index,group,deltas};
   }).filter(Boolean);
@@ -463,7 +471,7 @@ async function transferFaceBlendShapes(){
       for(const near of entry.nearby){const weight=1/Math.max(near.d,0.000025);total+=weight;for(let axis=0;axis<3;axis++)sampled[axis]+=sourceDelta[near.index*3+axis]*weight;}
       if(total)sampled=sampled.map(value=>value/total);
      }
-     mapped[v*3]=sampled[0]*morphScale;mapped[v*3+1]=sampled[1]*morphScale;mapped[v*3+2]=sampled[2]*morphScale;
+     mapped[v*3]=sampled[0]*morphScale*settings.strength;mapped[v*3+1]=sampled[1]*morphScale*settings.strength;mapped[v*3+2]=sampled[2]*morphScale*settings.strength;
      if((v%768)===767){progress('Copying '+String(item.group.name||('Face_'+item.index))+'… '+(v+1).toLocaleString()+' / '+(base.length/3).toLocaleString()+' vertices');await yieldUI();}
     }
     const accessor=appendFloatVec3(target,mapped);
@@ -478,11 +486,12 @@ async function transferFaceBlendShapes(){
   dstMesh.extras.targetNames=names;
   target.transferred=true;
   $('transferStatus').className='status ok';
-  $('transferStatus').textContent='Created '+added.length+' facial Morph Target(s) and VRM 0.x BlendShape Group(s): '+added.join(', ')+'. '+(directTopology?'Exact vertex-to-vertex mapping was used because primitive topology matched.':'Surface mapping was used because exact primitive topology did not match.')+' Check the expressions before using the exported model.';
+  $('transferStatus').textContent='Created '+added.length+' facial Morph Target(s). '+(directTopology?'Exact vertex topology mapping.':'Cross-topology surface mapping coverage: '+mappingCoverage.toFixed(1)+'%.')+' Expression strength: '+settings.strength.toFixed(2)+'×. Inspect every expression before export.';
   $('status').className='status ok';
   $('status').textContent='Face BlendShape transfer completed. Export Model B to save the new VRM 0.x file.';
   updateTransferControls();
  }catch(e){
+  if(targetSnapshot&&state.target){state.target.json=targetSnapshot;state.target.bin=targetBinSnapshot;state.target.transferred=false;}
   $('transferStatus').className='status err';$('transferStatus').textContent='Face transfer failed: '+e.message;
   $('status').className='status err';$('status').textContent='Face transfer failed: '+e.message;
  }finally{
@@ -523,6 +532,7 @@ $('exportBtn').addEventListener('click',exportTarget);$('downloadTargetBtn').add
 $('analyzeBtn').addEventListener('click',()=>{const a=state.source.data,b=state.target.data;const namesA=a.groups.map(g=>g.name||'(unnamed)');const namesB=new Set(b.groups.map(g=>g.name||'(unnamed)'));const matched=namesA.filter(n=>namesB.has(n));const onlyA=namesA.filter(n=>!namesB.has(n));const onlyB=b.groups.map(g=>g.name||'(unnamed)').filter(n=>!new Set(namesA).has(n));let html='<div class="stats"><div class="stat"><b>'+matched.length+'</b>Same-name groups</div><div class="stat"><b>'+onlyA.length+'</b>Source-only</div><div class="stat"><b>'+onlyB.length+'</b>Target-only</div></div><div class="group-list" style="margin-top:12px">';
 a.groups.forEach(g=>{const n=g.name||'(unnamed)';html+='<div class="group"><div class="group-top"><span>'+esc(n)+'</span><span class="pill">'+(namesB.has(n)?'Name match':'Source only')+'</span></div><div class="binds">'+(g.binds?.length||0)+' mesh bind(s) · '+(g.materialValues?.length||0)+' material value(s)</div></div>';});
 html+='</div>';if(!a.groups.length)html='<div class="empty">The source model has no VRM 0.x BlendShape groups.</div>';$('overview').className='';$('overview').innerHTML=html;$('status').className='status ok';$('status').textContent='Analysis complete. This build compares group names and reads bind metadata; it does not modify either file yet.';});
+['deltaStrength','matchRadius','minCoverage'].forEach(id=>$(id).addEventListener('input',()=>{$(id+'Value').textContent=id==='deltaStrength'?Number($(id).value).toFixed(2)+'×':id==='matchRadius'?Number($(id).value).toFixed(3)+' normalized units':$(id).value+'%';}));
 $('clearBtn').addEventListener('click',()=>{state.source=state.target=null;['source','target'].forEach(k=>{$(k+'File').value='';$(k+'Meta').className='meta';renderMeshChoices(k);});renderFaceGroups();updateMeshSelectionStatus();updateTransferControls();$('overview').className='empty';$('overview').textContent='No model data yet.';$('status').className='status';$('status').textContent='Select two VRM 0.x files to begin.';updateButtons();});
 </script>
 </body></html>
